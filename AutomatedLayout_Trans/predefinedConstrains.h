@@ -1,0 +1,27 @@
+#pragma once
+#ifndef __PREDEFINE__
+#define __PREDEFINE__
+#define PI 3.14159
+#define ANGLE_TO_RAD_F 0.0174533 //0.01745329251994329576923690768489
+
+#define PersonArea 2
+#define BEDSIDE_DIST 36
+#define SEAT_DIST 30
+#define CABINET_DIST 24
+#define DINING_DIST 36
+
+#define COFFEETABLE_TO_SEAT 17
+#define ENDTABLE_TO_SEAT_MAX 12
+#define NIGHTSTAND_TO_BED_MAX 12
+
+#define CONVERSATION_M_MIN 4
+#define CONVERSATION_M_MAX 8
+
+#define TYPE_CHAIR 0
+#define TYPE_COFFETABLE 1
+#define TYPE_SOFA 2
+#define TYPE_ENDTABLE 3
+#define TYPE_NIGHTSTAND 4
+#define TYPE_BED 5
+
+#endif // !__PREDEFINE__
