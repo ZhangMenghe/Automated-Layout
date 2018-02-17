@@ -8,7 +8,7 @@
 using namespace cv;
 using namespace std;
 
-void plotLayoutResult(const automatedLayout * layout) {
+/*void plotLayoutResult(const automatedLayout * layout) {
 	Mat img = Mat::ones(600, 800, CV_32F);
 	// You can also read in an existing place
 	/*Mat original = imread("1.png", CV_LOAD_IMAGE_GRAYSCALE);
@@ -17,7 +17,7 @@ void plotLayoutResult(const automatedLayout * layout) {
 		cout << "Could not open or find the image" << endl;
 		return ;
 	}*/
-	Room * lr = layout->room;
+	/*Room * lr = layout->room;
 	for (int i = 0; i < lr->wallNum; i++) {
 		wall* tmp = &lr->walls[i];
 		Point2f p1 = lr->card_to_graphics_coord_Point(lr->width / 2, lr->height / 2, tmp->vertices[0]);
@@ -32,20 +32,21 @@ void plotLayoutResult(const automatedLayout * layout) {
 	//rectangle(img, RectangleToDraw.tl(), RectangleToDraw.br(), Scalar(0, 0, 255), 2, 8, 0);
 	imshow("DrawRectangle", img);
 	while (char(waitKey(0))) {};
-}
+}*/
 
 int main() {
 	Room* room = new Room();
 	//TODO:CHECK OUTBOUND
-	room->add_a_wall(Vec3f(0, 30, 0), 90, 80, 10);
-	room->add_a_wall(Vec3f(40, 0, 0), 0, 60, 10);
-	room->add_an_object(Vec3f(0, 0, 0), 90, 10, 20, 10, TYPE_CHAIR);
-	room->add_an_object(Vec3f(10, 0, 0), 90, 10, 20, 10, TYPE_CHAIR);
-	room->add_a_focal_point(Vec3f(0, 30, 0));
+	room->add_a_wall(Vec3f(0, 300, 0), 90, 800, 10);
+	room->add_a_wall(Vec3f(400, 0, 0), 0, 600, 10);
+	room->add_an_object(Vec3f(0, 0, 0), 90, 100, 200, 10, TYPE_CHAIR);
+	room->add_an_object(Vec3f(100, 0, 0), 90, 100, 200, 10, TYPE_CHAIR);
+	room->add_a_focal_point(Vec3f(0, 300, 0));
 
 	automatedLayout* layout = new automatedLayout(room);
 	layout->generate_suggestions();
 	layout->display_suggestions();
-	plotLayoutResult(layout);
+	//plotLayoutResult(layout);
+	system("pause");
 	return 0;
 }

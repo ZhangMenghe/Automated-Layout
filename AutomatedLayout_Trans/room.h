@@ -60,11 +60,11 @@ public:
 	map<int, Vec3f> focalPoint_map;
 	int objctNum;
 	int wallNum;
-	Mat furnitureMask;
+	Mat_<uchar> furnitureMask;
 	float width;
 	float height;
 
-	Room(float s_width=80.0f, float s_height=60.0f) {
+	Room(float s_width=800.0f, float s_height=600.0f) {
 		center = Vec3f(.0f, .0f, .0f);
 		objctNum = 0;
 		wallNum = 0;
@@ -217,7 +217,9 @@ public:
 					Vec2i ps = card_to_graphics_coord(half_width, half_height, it->boundingBox.x, ty);
 					for (int tx = ps[0]; tx < bound_x; tx++) {
 						//Vec2i index = card_to_graphics_coord(half_width, half_height, ty, tx);
-						furnitureMask.at<uchar>(ps[1], tx) = 1;
+						//if (ps[1]<0 || ps[1]>furnitureMask.rows-1 || tx>furnitureMask.cols-1|| tx<0)
+						//	cout << ps[1] <<"---"<<tx<< endl;
+						furnitureMask[ps[1]][tx] = 1;
 					}
 				}
 			}
@@ -252,7 +254,7 @@ public:
 			Vec2i ps = card_to_graphics_coord(half_width, half_height, k1*ty + b1, ty);
 			Vec2i pe = card_to_graphics_coord(half_width, half_height, k2*ty + b2, ty);
 			for (int tx = ps[0]; tx < pe[0]; tx++)
-				furnitureMask.at<uchar>(ps[1], tx) = 1;
+				furnitureMask[ps[1]][tx]= 1;
 		}
 	}
 	void update_obj_boundingBox_and_vertices(singleObj& obj) {

@@ -1,7 +1,4 @@
 #include "automatedLayout.h"
-#include <iostream>
-#include <vector>
-#include <random>
 #include "predefinedConstrains.h"
 
 
@@ -26,8 +23,8 @@ float automatedLayout::density_function(float cost) {
 }
 
 void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid) {
-	//int flag = rand() % 3;
-	int flag = 0;
+	int flag = rand() % 3;
+	//int flag = 1;
 	std::default_random_engine generator;
 
 	float half_width = room->width / 2;
@@ -55,6 +52,7 @@ void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& 
 			ori_rot.push_back(selectedObj->zrotation);
 			selectedid.push_back(furnitureID);
 
+			//update boundingbox, translation, vertices
 			room->set_obj_translation(selectedObj->translation[0]+tx, selectedObj->translation[1] + ty,furnitureID);
 			int i = 0;
 			for (; i < room->objctNum; i++) {
@@ -71,11 +69,13 @@ void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& 
 		//perturb_orientation();
 		std::normal_distribution<float> distribution_rot(0, PI/3);
 		int furnitureID = rand() % room->objctNum;
-		singleObj selectedObj = room->objects[furnitureID];
-		ori_trans.push_back(selectedObj.translation);
-		ori_rot.push_back(selectedObj.zrotation);
+		singleObj* selectedObj = &room->objects[furnitureID];
+		ori_trans.push_back(selectedObj->translation);
+		ori_rot.push_back(selectedObj->zrotation);
 		selectedid.push_back(furnitureID);
-		selectedObj.zrotation += distribution_rot(generator);
+		selectedObj->zrotation = fmod(selectedObj->zrotation + distribution_rot(generator), PI);
+		cout << selectedObj->zrotation << endl;
+		room->update_obj_boundingBox_and_vertices(room->objects[furnitureID]);
 	}
 	else if (flag == 2) {
 		//swap_random();
@@ -158,15 +158,44 @@ void automatedLayout::setup_default_furniture() {
 }
 
 void automatedLayout::display_suggestions() {
+	vector<vector<Vec3f>> trans_result;
+	vector<vector<float>> rot_result;
+
 	int resSize = res_rotation.size();
 	for (int i = resSize; i > 0; i--) {
-		cout << "Rank: " << i << " recommendation: " << endl;
-		vector<Vec3f> translation = res_transform.front();
-		vector<float> rotation = res_rotation.front();
+		//cout << "Rank: " << i << " recommendation: " << endl;
+		trans_result.push_back(res_transform.front());
+		rot_result.push_back(res_rotation.front());
 		res_transform.pop();
 		res_rotation.pop();
-		for (int n = 0; n < room->objctNum; n++)
-			cout << "obj " << n << "position:	( " << translation[n][0] << "," << translation[n][1] << " )			Rotation: " << rotation[n] << endl;
+		//for (int n = 0; n < room->objctNum; n++)
+		//	cout << "obj " << n << "position:	( " << trans_result[n][0] << "," << translation[n][1] << " )			Rotation: " << rotation[n] << endl;
 	}
 	cout << "Min Cost is :"<<min_cost << endl;
+
+	ofstream outfile;
+	outfile.open("recommendation.txt", 'w');
+	if (outfile.is_open()) {
+		outfile << "WALL_Id\t|\tzheight\t|\tvertices\r\n";
+		for (int i = 0; i < room->wallNum; i++) {
+			wall * tmp = &room->walls[i];
+			outfile << to_string(tmp->id) << "\t|\t" << to_string(tmp->zheight) << "\t|\t" <<tmp->vertices[0] << "\t|\t" << tmp->vertices[1]<<"\r\n";
+		}
+		outfile << "OBJ_Id\t|\tCategory\t|\tBoundingBox\t|\tHeight\t|\tVertices\r\n";
+		for (int i = 0; i < room->objctNum; i++) {
+			singleObj * tmp = &room->objects[i];
+			outfile << tmp->id << "\t|\t" << tmp->catalogId << "\t|\t" << tmp->boundingBox << "\t|\t" << tmp->zheight;
+			for (int i = 0; i < 4; i++)
+				outfile << "\t|\t" << tmp->vertices[i];
+			outfile << "\r\n";
+			for (int res = resSize; res > 0; res--)
+				outfile << "Recommendation"<< res <<"\t|\t" << trans_result[res-1][i] << "\t|\t" <<rot_result[res-1][i]<<"\r\n";
+			
+		}
+			
+		outfile.close();
+	}
+	else
+		exit(-1);
+
 }

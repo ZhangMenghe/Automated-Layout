@@ -2,11 +2,15 @@
 #include "layoutConstrains.h"
 #include "room.h"
 #include <queue>  
+#include <iostream>
+#include <vector>
+#include <random>
+#include <fstream>
 class automatedLayout
 {
 private:
 	layoutConstrains *constrains;
-	
+	Room * room;
 	float cost_function();
 	float density_function(float cost);
 	void randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid);
@@ -14,7 +18,7 @@ private:
 	void Metropolis_Hastings();
 
 public:
-	Room * room;
+	
 	int resNum = 3;
 	float min_cost;
 	queue<vector<Vec3f>> res_transform;
