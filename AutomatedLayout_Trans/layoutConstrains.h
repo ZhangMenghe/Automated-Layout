@@ -2,7 +2,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
 #include "include\opencv2\core.hpp"
+#include "include\opencv2\imgproc.hpp"
+#include "include\opencv2\highgui.hpp"
 #include "room.h"
 using namespace std;
 using namespace cv;
@@ -45,7 +48,6 @@ public:
 		room = mr;
 		constrain_terms = vector<float>(11, 0);
 	}
-	float cal_overlapping_area(const Rect& r1, const Rect& r2, float rot1 = .0f, float rot2 = .0f);
 	vector<float> get_all_constrain_terms();
 
 };

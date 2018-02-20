@@ -1,9 +1,7 @@
 #include <iostream>
 #include "automatedLayout.h"
 #include "room.h"
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
+
 
 using namespace cv;
 using namespace std;
@@ -47,6 +45,6 @@ int main() {
 	layout->generate_suggestions();
 	layout->display_suggestions();
 	//plotLayoutResult(layout);
-	system("pause");
+	//system("pause");
 	return 0;
 }

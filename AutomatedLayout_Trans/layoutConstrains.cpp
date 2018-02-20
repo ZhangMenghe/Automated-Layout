@@ -1,6 +1,7 @@
 #include "layoutConstrains.h"
 #include "predefinedConstrains.h"
-#include "include\opencv2\imgproc.hpp"
+
+#include <algorithm> 
 #include <math.h>
 using namespace std;
 using namespace cv;
@@ -26,19 +27,6 @@ float dist_between_Vectors(const Vec3f& v1, const Vec3f& v2) {
 	else
 		return acos(a); // 0..PI
 }*/
-
-//NOT CONSIDER ROTATION YET!!
-float layoutConstrains::cal_overlapping_area(const Rect& r1, const Rect& r2, float rot1, float rot2) {
-	if (r1.x > r2.x + r2.width || r1.x + r1.width < r2.x)
-		return 0;
-	if (r1.y > r2.y + r2.height || r1.y + r1.height < r2.y)
-		return 0;
-	float dx = std::min(r1.x + r1.width, r2.x + r2.width) - std::max(r1.x, r2.x);
-	float dy = std::min(r1.y, r2.y) - std::max(r1.y - r1.height, r2.y - r2.height);
-	if ((dx >= 0) && (dy >= 0))
-		return dx*dy;
-	return 0;
-}
 
 void layoutConstrains::get_pairwise_relation(const singleObj& obj1, const singleObj& obj2, int&pfg, float&m, float&M) {
 	//std::map<int, std::pair<int, float>> pairMap;
@@ -75,7 +63,7 @@ void layoutConstrains::cal_clearance_violation(float& mcv) {
 	mcv = 0;
 	for (int i = 0; i < room->objctNum; i++) {		
 		for (int j = i + 1; j < room->objctNum; j++) {
-			mcv += cal_overlapping_area(room->objects[i].boundingBox, room->objects[j].boundingBox, room->objects[i].zrotation, room->objects[j].zrotation);
+			mcv += room->cal_overlapping_area(room->objects[i].boundingBox, room->objects[j].boundingBox);
 		}
 	}
 }

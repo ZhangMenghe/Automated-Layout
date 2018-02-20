@@ -4,6 +4,7 @@
 #include <utility>
 #include "include\opencv2\core.hpp"
 #include "predefinedConstrains.h"
+//#include "utils.h"
 using namespace std;
 using namespace cv;
 #ifndef __ROOM_H__
@@ -73,12 +74,45 @@ public:
 		height = s_height;
 		setup_pairwise_map();
 	}
-	void set_obj_translation(float tx, float ty, int id) {
+	float cal_overlapping_area(const Rect r1, const Rect r2) {
+		if (r1.x > r2.x + r2.width || r1.x + r1.width < r2.x)
+			return 0;
+		if (r1.y > r2.y + r2.height || r1.y + r1.height < r2.y)
+			return 0;
+		float dx = std::min(r1.x + r1.width, r2.x + r2.width) - std::max(r1.x, r2.x);
+		float dy = std::min(r1.y, r2.y) - std::max(r1.y - r1.height, r2.y - r2.height);
+		if ((dx >= 0) && (dy >= 0))
+			return dx*dy;
+		return 0;
+	}
+	void set_obj_zrotation(float new_rotation, int id) {
+		objects[id].zrotation = fmod(new_rotation, PI);
+		update_obj_boundingBox_and_vertices(objects[id]);
+	}
+
+	void tiny_position_adjustment() {
+	}
+
+	bool set_obj_translation(float tx, float ty, int id) {
+		float ori_boundx = objects[id].boundingBox.x;
+		float ori_boundy = objects[id].boundingBox.y;
+
 		float movex = tx - objects[id].translation[0];
 		float movey = ty - objects[id].translation[1];
 		objects[id].boundingBox.x += movex;
 		objects[id].boundingBox.y += movey;
+		
 
+		for (int i = 0; i < objctNum; i++) {
+			if (i != id) {
+				float overlapping_ratio = cal_overlapping_area(objects[i].boundingBox, objects[id].boundingBox) / objects[id].boundingBox.area();
+				if (overlapping_ratio != 0){
+					objects[id].boundingBox.x = ori_boundx;
+					objects[id].boundingBox.y = ori_boundy;
+					return false;
+				}	
+			}
+		}
 		objects[id].translation[0] = tx;
 		objects[id].translation[1] = ty;
 
@@ -86,6 +120,7 @@ public:
 			objects[id].vertices[i][0] += movex;
 			objects[id].vertices[i][1] += movey;
 		}
+		return true;
 	}
 	void set_objs_transformation(vector<Vec3f> transform) {
 		for (int i = 0; i < objctNum; i++)
@@ -197,8 +232,10 @@ public:
 		focalPoint_map[groupId] = focalpoint;
 	}
 	Vec2i card_to_graphics_coord(float half_width, float half_height, float px, float py) {
+		
 		int gx = int(floor(half_width + px));
 		int gy = int(floor(half_height - py));
+		//cout << gy<<"---"<<py<<endl;
 		return Vec2i(gx, gy);
 	}
 	Point2f card_to_graphics_coord_Point(float half_width, float half_height, Vec2f vertex) {
@@ -209,47 +246,50 @@ public:
 		float half_width = width / 2;
 		float half_height = height / 2;
 		for (vector<singleObj>::iterator it = objects.begin(); it != objects.end(); it++) {
-			if (remainder(it->zrotation, PI/2) < 0.001) {
+			// find 4 line's slope
+			vector<float> k(4);
+			vector<float> b(4);
+
+			//x = ky+b
+			Vec2f p1, p2;
+
+			for (int i = 0; i < 4; i++) {
+				p1 = it->vertices[i]; p2 = it->vertices[(i + 1) % 4];
+				k[i] = (p2[0] - p1[0]) / (p2[1] - p1[1]);
+				b[i] = p1[0] - k[i] * p1[1];
+			}
+
+
+			if (fabs(k[0])<0.001f || fabs(k[1])<0.001f) {
+				//cout << "k: " << fabs(k[0]) << "--" << fabs(k[1]) << endl;
 				float min_y = it->boundingBox.y - it->boundingBox.height;
 				float bound_x = std::min(it->boundingBox.x + half_width +it->boundingBox.width, width);
-
+				//cout << it->boundingBox.y << endl;
+				min_y = (min_y > -half_height) ? min_y : -half_height+1;
 				for (float ty = it->boundingBox.y; ty >min_y; ty--) {
 					Vec2i ps = card_to_graphics_coord(half_width, half_height, it->boundingBox.x, ty);
 					for (int tx = ps[0]; tx < bound_x; tx++) {
-						//Vec2i index = card_to_graphics_coord(half_width, half_height, ty, tx);
-						//if (ps[1]<0 || ps[1]>furnitureMask.rows-1 || tx>furnitureMask.cols-1|| tx<0)
-						//	cout << ps[1] <<"---"<<tx<< endl;
 						furnitureMask[ps[1]][tx] = 1;
 					}
 				}
 			}
-			else {
-				// find 4 line's slope
-				vector<float> k(4);
-				vector<float> b(4);
-				
-				//x = ky+b
-				Vec2f p1, p2;
-
-				for (int i = 0; i < 4; i++) {
-					p1 = it->vertices[i]; p2 = it->vertices[(i + 1) % 4];
-					k[i] =  (p2[0] - p1[0])/(p2[1] - p1[1]);
-					b[i] = p1[0] - k[i] * p1[1];
-				}
+			else {				
 				if (it->vertices[0][1] <= it->vertices[2][1]) {
-					fill_part_mask(k[0],k[1],b[0],b[1],it->boundingBox.y, it->vertices[0][1], half_width, half_height);
-					fill_part_mask(k[3], k[1], b[3], b[1], it->vertices[0][1], it->vertices[2][1], half_width, half_height);
-					fill_part_mask(k[3], k[2], b[3], b[2], it->vertices[2][1], it->vertices[3][1], half_width, half_height);
-				}
-				else {
-					fill_part_mask(k[0], k[1], b[0], b[1], it->boundingBox.y, it->vertices[2][1], half_width, half_height);
+					fill_part_mask(k[0],k[1],b[0],b[1],it->boundingBox.y, it->vertices[2][1], half_width, half_height);
 					fill_part_mask(k[0], k[2], b[0], b[2], it->vertices[2][1], it->vertices[0][1], half_width, half_height);
 					fill_part_mask(k[3], k[2], b[3], b[2], it->vertices[0][1], it->vertices[3][1], half_width, half_height);
+				}
+				else {
+					fill_part_mask(k[0], k[1], b[0], b[1], it->boundingBox.y, it->vertices[0][1], half_width, half_height);
+					fill_part_mask(k[0], k[2], b[0], b[2], it->vertices[0][1], it->vertices[2][1], half_width, half_height);
+					fill_part_mask(k[3], k[2], b[3], b[2], it->vertices[2][1], it->vertices[3][1], half_width, half_height);
 				}
 			}
 		}
 	}
-	void fill_part_mask(float k1, float k2, float b1, float b2, float y_max, float y_min, float half_width, float half_height) {
+	void fill_part_mask(float k1, float k2, float b1, float b2, float y_max, float y_min, float half_width, float half_height) {	
+		y_min = (y_min > -half_height) ? y_min : -half_height+1;
+		y_max = (y_max < half_height) ? y_max : half_height-1;
 		for (float ty = y_min; ty < y_max; ty++) {
 			Vec2i ps = card_to_graphics_coord(half_width, half_height, k1*ty + b1, ty);
 			Vec2i pe = card_to_graphics_coord(half_width, half_height, k2*ty + b2, ty);
@@ -278,6 +318,26 @@ public:
 		float max_y = *max_element(ybox.begin(), ybox.end());
 
 		obj.boundingBox = Rect2f(min_x, max_y, (max_x - min_x), (max_y - min_y));
+
+		float offsetx = .0f, offsety = .0f;
+		float half_width = width / 2, half_height = height / 2;
+
+		if (obj.boundingBox.x < -half_width)
+			offsetx = -half_width - obj.boundingBox.x+1;
+		else if (obj.boundingBox.x + obj.boundingBox.width > half_width)
+			offsetx = obj.boundingBox.x + obj.boundingBox.width - half_width-1;
+		if (obj.boundingBox.y > half_height)
+			offsety = half_height- obj.boundingBox.y-1;
+		else if (obj.boundingBox.y - obj.boundingBox.height < -half_height)
+			offsety = -half_height - obj.boundingBox.y + obj.boundingBox.height+1;
+		if (offsetx != 0 || offsety != 0) {
+			obj.translation += Vec3f(offsetx, offsety, .0f);
+			for (int i = 0; i < 4; i++) {
+				obj.vertices[i] += Vec2f(offsetx, offsety);
+			}
+			obj.boundingBox.x += offsetx;
+			obj.boundingBox.y += offsety;
+		}
 	}
 
 	void rot_around_point(const Vec3f& center, Vec2f& pos, float s, float c) {

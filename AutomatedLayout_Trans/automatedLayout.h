@@ -1,4 +1,7 @@
 #pragma once
+#include"include\opencv2\core\core.hpp"
+#include "include\opencv2\highgui\highgui.hpp"
+#include "include\opencv2\imgproc\imgproc.hpp"
 #include "layoutConstrains.h"
 #include "room.h"
 #include <queue>  
@@ -16,6 +19,7 @@ private:
 	void randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid);
 	void setup_default_furniture();
 	void Metropolis_Hastings();
+	void random_translation(int furnitureID, default_random_engine generator);
 
 public:
 	

@@ -1,6 +1,7 @@
 #include "automatedLayout.h"
 #include "predefinedConstrains.h"
-
+#include <chrono>
+#include <random>
 
 using namespace std;
 using namespace cv;
@@ -10,7 +11,7 @@ float automatedLayout::cost_function() {
 	float cost = 0;
 	vector<float> constrain_params = constrains->get_all_constrain_terms();
 	//float mcv, mci, mpd, mpa, mcd, mca, mvb, mfa, mwa, mef, msy
-	float wcv = 1, wci = 0.01, wpd = 1.0, wpa = 1.0, wcd = 1.0, wca = 1.0, wvb = 0.7, wfa = 1.5, wwa = 1.5, wsy = 1.0, wef = 0.5;
+	float wcv = 1, wci = 0.01, wpd = 1.0, wpa = 1.0, wcd = 1.0, wca = 1.0, wvb = 0.7, wfa = 1.5, wwa = 1.5, wsy = 1.0, wef = 3.5;
 	float weights[] = {wcv,wci,wpd,wpa,wcd,wca,wvb,wfa,wwa,wsy,wef };
 	for (int i = 0; i < 11; i++)
 		cost += weights[i] * constrain_params[i];
@@ -21,63 +22,56 @@ float automatedLayout::density_function(float cost) {
 	float beta = 0.85;
 	return exp2f(-beta * cost);
 }
-
-void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid) {
-	int flag = rand() % 3;
-	//int flag = 1;
-	std::default_random_engine generator;
-
+void automatedLayout::random_translation(int furnitureID, default_random_engine generator) {
+	singleObj *selectedObj = &room->objects[furnitureID];
+	std::normal_distribution<float> distribution_width(0, room->width / 6);
+	std::normal_distribution<float> distribution_height(0, room->height / 6);
 	float half_width = room->width / 2;
 	float half_height = room->height / 2;
+	Rect2f * boundingbox = &selectedObj->boundingBox;
+	float tx, ty;
+	//cout << "translate:" << endl;
+	while (1) {
+		tx = distribution_width(generator);
+		ty = distribution_height(generator);
 
-	if (flag == 0) {
-		//perturb_position();
-		std::normal_distribution<float> distribution_width(0, room->width / 6);
-		std::normal_distribution<float> distribution_height(0, room->height / 6);
-		int furnitureID = rand() % room->objctNum;
-		singleObj *selectedObj = &room->objects[furnitureID];
-		Rect2f * boundingbox = &selectedObj->boundingBox;
-		float tx, ty;
-		while (1) {
+		while (boundingbox->x + tx <= -half_width || boundingbox->x + boundingbox->width + tx >= half_width
+			|| boundingbox->y + ty >= half_height || boundingbox->y - boundingbox->height + ty <= -half_height) {
 			tx = distribution_width(generator);
 			ty = distribution_height(generator);
-			
-			while (boundingbox->x + tx < -half_width || boundingbox->x + boundingbox->width+tx > half_width 
-				|| boundingbox->y + ty > half_height || boundingbox->y - boundingbox->height + ty < -half_height) {
-				tx = distribution_width(generator);
-				ty = distribution_height(generator);
-			}
-
-			ori_trans.push_back(selectedObj->translation);
-			ori_rot.push_back(selectedObj->zrotation);
-			selectedid.push_back(furnitureID);
-
-			//update boundingbox, translation, vertices
-			room->set_obj_translation(selectedObj->translation[0]+tx, selectedObj->translation[1] + ty,furnitureID);
-			int i = 0;
-			for (; i < room->objctNum; i++) {
-				if (i != furnitureID) {
-					if (constrains->cal_overlapping_area(room->objects[furnitureID].boundingBox, room->objects[i].boundingBox) != 0)
-						break;
-				}
-			}
-			if (i == room->objctNum)
-				return;
 		}
+
+		//update boundingbox, translation, vertices
+		if (room->set_obj_translation(selectedObj->translation[0] + tx, selectedObj->translation[1] + ty, furnitureID))
+			break;
 	}
+}
+void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid) {
+	int flag = rand() %3;
+	//int flag =0;
+	unsigned seed = chrono::system_clock::now().time_since_epoch().count();
+
+	std::default_random_engine generator(seed);
+
+	if (flag == 0) {		
+		int furnitureID = rand() % room->objctNum;
+		ori_trans.push_back(room->objects[furnitureID].translation);
+		ori_rot.push_back(room->objects[furnitureID].zrotation);
+		selectedid.push_back(furnitureID);
+		random_translation(furnitureID, generator);
+	}
+
 	else if (flag == 1) {
 		//perturb_orientation();
-		std::normal_distribution<float> distribution_rot(0, PI/3);
+		std::normal_distribution<float> distribution_rot(0, PI/6);
 		int furnitureID = rand() % room->objctNum;
 		singleObj* selectedObj = &room->objects[furnitureID];
 		ori_trans.push_back(selectedObj->translation);
 		ori_rot.push_back(selectedObj->zrotation);
 		selectedid.push_back(furnitureID);
-		selectedObj->zrotation = fmod(selectedObj->zrotation + distribution_rot(generator), PI);
-		cout << selectedObj->zrotation << endl;
-		room->update_obj_boundingBox_and_vertices(room->objects[furnitureID]);
+		room->set_obj_zrotation(selectedObj->zrotation + distribution_rot(generator), furnitureID);
 	}
-	else if (flag == 2) {
+	else{
 		//swap_random();
 		int objId1 = rand() % room->objctNum;
 		int objId2 = objId1;
@@ -91,17 +85,21 @@ void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& 
 		ori_rot.push_back(room->objects[objId2].zrotation);
 		selectedid.push_back(objId2);
 
-		swap(room->objects[objId1].translation, room->objects[objId2].translation);
-		swap(room->objects[objId1].zrotation, room->objects[objId2].zrotation);
-		float tmpx, tmpy;
-		tmpx = room->objects[objId1].boundingBox.x;
-		tmpy = room->objects[objId1].boundingBox.y;
+		singleObj * obj1, *obj2;
+		obj1 = &room->objects[objId1];
+		obj2 = &room->objects[objId2];
 
-		room->objects[objId1].boundingBox.x = room->objects[objId2].boundingBox.x;
-		room->objects[objId1].boundingBox.y = room->objects[objId2].boundingBox.y;
+		float ori1_rot = obj1->zrotation;
+		room->set_obj_zrotation(obj2->zrotation, objId1);
+		room->set_obj_zrotation(ori1_rot, objId2);
 
-		room->objects[objId2].boundingBox.x = tmpx;
-		room->objects[objId2].boundingBox.y = tmpy;
+		float ori1x = obj1->translation[0];
+		float ori1y = obj1->translation[1];
+
+		if(!room->set_obj_translation(obj2->translation[0], obj2->translation[1], objId1))
+			random_translation(objId1, generator);
+		if(!room->set_obj_translation(ori1x, ori1y, objId2))
+			random_translation(objId2, generator);
 	}
 }
 void automatedLayout::Metropolis_Hastings() {
@@ -126,7 +124,8 @@ void automatedLayout::Metropolis_Hastings() {
 	if (alpha > t) {
 		for (int i = 0; i < perturb_id.size(); i++) {
 			room->set_obj_translation(perturb_ori_trans[i][0], perturb_ori_trans[i][1], perturb_id[i]);
-			room->objects[perturb_id[i]].zrotation = perturb_ori_rot[i];
+			//room->objects[perturb_id[i]].zrotation = perturb_ori_rot[i];
+			room->set_obj_zrotation(perturb_ori_rot[i], perturb_id[i]);
 		}
 	}
 	/*else {
@@ -145,8 +144,11 @@ void automatedLayout::Metropolis_Hastings() {
 }
 
 void automatedLayout::generate_suggestions() {
-	for (int i = 0; i < 1000; i++)
-		Metropolis_Hastings();		
+	for (int i = 0; i < 100; i++) {
+		cout << "Times:" << i << endl;
+		Metropolis_Hastings();
+	}
+				
 }
 
 void automatedLayout::setup_default_furniture() {
