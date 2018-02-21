@@ -15,6 +15,7 @@ struct singleObj
 	int id;
 	Rect2f boundingBox;
 	vector<Vec2f> vertices;
+	vector<Vec2f> origin_vertices;
 	Vec3f translation;
 	float zrotation;
 	float objWidth, objHeight;
@@ -201,9 +202,12 @@ public:
 		obj.vertices.push_back(Vec2f(half_width + cx, -half_height + cy));
 		obj.vertices.push_back(Vec2f(-half_width + cx, -half_height + cy));
 		
-		
+		obj.origin_vertices.push_back(Vec2f(-half_width, half_height));
+		//obj.vertices.push_back(Vec2f(half_width, half_height));
+		obj.origin_vertices.push_back(Vec2f(half_width, -half_height));
+		//obj.vertices.push_back(Vec2f(-half_width, -half_height));
 	}
-	void add_an_object(Vec3f position, float rot, float obj_width, float obj_height, float obj_zheight, int furnitureType, int nearestWall=-1, int groupId = 0) {
+	void add_an_object(Vec3f position, float rot, float obj_width, float obj_height, float obj_zheight, int furnitureType, int groupId = 0) {
 		singleObj obj;
 		obj.id = objects.size();
 		//obj.boundingBox = Rect(tx, ty, obj_width, obj_height);
@@ -218,10 +222,8 @@ public:
 		//setup bounding box and vertices
 		initialize_vertices(obj);
 		update_obj_boundingBox_and_vertices(obj);
-		if(nearestWall == -1)
-			obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
-		else
-			obj.nearestWall = nearestWall;
+
+		obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
 
 		objGroupMap[groupId].push_back(obj.id);
 

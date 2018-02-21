@@ -144,7 +144,7 @@ void automatedLayout::Metropolis_Hastings() {
 }
 
 void automatedLayout::generate_suggestions() {
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 1000; i++) {
 		cout << "Times:" << i << endl;
 		Metropolis_Hastings();
 	}
@@ -183,18 +183,20 @@ void automatedLayout::display_suggestions() {
 			wall * tmp = &room->walls[i];
 			outfile << to_string(tmp->id) << "\t|\t" << to_string(tmp->zheight) << "\t|\t" <<tmp->vertices[0] << "\t|\t" << tmp->vertices[1]<<"\r\n";
 		}
-		outfile << "OBJ_Id\t|\tCategory\t|\tBoundingBox\t|\tHeight\t|\tVertices\r\n";
+		outfile << "OBJ_Id\t|\tCategory\t|\tHeight\t|\tVertices\r\n";
 		for (int i = 0; i < room->objctNum; i++) {
 			singleObj * tmp = &room->objects[i];
-			outfile << tmp->id << "\t|\t" << tmp->catalogId << "\t|\t" << tmp->boundingBox << "\t|\t" << tmp->zheight;
-			for (int i = 0; i < 4; i++)
-				outfile << "\t|\t" << tmp->vertices[i];
+			outfile << tmp->id << "\t|\t" << tmp->catalogId  << "\t|\t"<<tmp->zheight;
+			for (int i = 0; i < 2; i++)
+				outfile << "\t|\t" << tmp->origin_vertices[i];
 			outfile << "\r\n";
 			for (int res = resSize; res > 0; res--)
 				outfile << "Recommendation"<< res <<"\t|\t" << trans_result[res-1][i] << "\t|\t" <<rot_result[res-1][i]<<"\r\n";
 			
 		}
-			
+		outfile << "FocalPoint\t|\tPosition\r\n";
+		for (map<int, Vec3f>::iterator it = room->focalPoint_map.begin(); it != room->focalPoint_map.end(); it++)
+			outfile << it->first << "\t|\t" << it->second << "\r\n";
 		outfile.close();
 	}
 	else

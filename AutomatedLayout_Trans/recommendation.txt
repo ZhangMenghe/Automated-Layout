@@ -1,0 +1,14 @@
+WALL_Id	|	zheight	|	vertices
+0	|	10.000000	|	[-400, 300]	|	[400, 300]
+1	|	10.000000	|	[400, -300]	|	[400, 300]
+OBJ_Id	|	Category	|	Height	|	Vertices
+0	|	0	|	10	|	[-50, 100]	|	[50, -100]
+Recommendation3	|	[-152.742, 121.193, 0]	|	2.68832
+Recommendation2	|	[-259.178, -143.4, 0]	|	3.06539
+Recommendation1	|	[-207.533, 36.7905, 0]	|	1.04879
+1	|	0	|	10	|	[-50, 100]	|	[50, -100]
+Recommendation3	|	[280.455, 113.989, 0]	|	2.80557
+Recommendation2	|	[78.4969, -13.8153, 0]	|	2.48286
+Recommendation1	|	[181.341, -206.177, 0]	|	1.7787
+FocalPoint	|	Position
+0	|	[0, 300, 0]
