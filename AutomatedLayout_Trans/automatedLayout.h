@@ -14,6 +14,7 @@ class automatedLayout
 private:
 	layoutConstrains *constrains;
 	Room * room;
+	vector<float>weights;
 	float cost_function();
 	float density_function(float cost);
 	void randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid);
@@ -27,13 +28,16 @@ public:
 	float min_cost;
 	queue<vector<Vec3f>> res_transform;
 	queue<vector<float>> res_rotation;
+	
 
-	automatedLayout(Room* m_room) {
+	automatedLayout(Room* m_room, vector<float>in_weights) {
 		constrains = new layoutConstrains(m_room);
 		room = m_room;
 		min_cost = INFINITY;
+		weights = in_weights;
 		res_transform.push(m_room->get_objs_transformation());
 		res_rotation.push(m_room->get_objs_rotation());
+
 	}
 	automatedLayout() {
 		setup_default_furniture();

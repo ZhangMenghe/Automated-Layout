@@ -7,7 +7,7 @@ using namespace cv;
 using namespace std;
 
 
-void parser_inputfile(const char* filename, Room * room) {
+void parser_inputfile(const char* filename, Room * room, vector<float>& weights) {
 	ifstream instream(filename);
 	string str;
 	vector<vector<float>> parameters;
@@ -36,6 +36,8 @@ void parser_inputfile(const char* filename, Room * room) {
 	for (int i = 0; i < itemNum; i++) {
 		switch (cateType[i])
 		{
+		case '#':
+			break;
 		//add a new wall
 		case 'w':
 			room->add_a_wall(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), parameters[i][3], parameters[i][4], parameters[i][5]);
@@ -52,9 +54,17 @@ void parser_inputfile(const char* filename, Room * room) {
 			groupid = parameters[i].size() == 8 ? 0 : parameters[i][8];
 			room->add_a_fixedObject(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), parameters[i][3], parameters[i][4], parameters[i][5], parameters[i][6], int(parameters[i][7]), groupid);
 			break;
+		case 'v':
+			for (int n = 0; n < parameters[i].size(); n++)
+				weights.push_back(parameters[i][n]);
+			break;
 		default:
 			break;
 		}
+	}
+	if (weights.size() < 11) {
+		for (int i = weights.size(); i < 11; i++)
+			weights.push_back(1.0f);
 	}
 
 
@@ -78,9 +88,10 @@ int main(){
 	filename = new char[11];
 	int r = strcpy_s(filename,11, "input.txt");
 	Room* room = new Room();
-	parser_inputfile(filename, room);	
+	vector<float>weights;
+	parser_inputfile(filename, room, weights);	
 	if (room != nullptr && (room->objctNum != 0 || room->wallNum != 0)) {
-		automatedLayout* layout = new automatedLayout(room);
+		automatedLayout* layout = new automatedLayout(room, weights);
 		layout->generate_suggestions();
 		layout->display_suggestions();
 	}

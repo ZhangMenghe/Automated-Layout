@@ -24,6 +24,8 @@ class plotRoom():
                 state = 1
             elif(words[0]=="FocalPoint"):
                 state = 2
+            elif(words[0]=="FIXOBJ_Id"):
+            	state = 3
             else:
                 if(state == 0):
                     self.draw_wall(words)
@@ -32,8 +34,12 @@ class plotRoom():
                     #self.draw_boundingbox(words, recommands)
                     self.draw_object(words,recommands)
                     i+=3
-                else:
+                elif(state==2):
                     self.draw_focal(words)
+                else:
+                	fixed = contents[i+1].split('\t|\t')
+                	self.draw_object(words, fixed)
+                	i = i+1
             i+=1
         cv2.imshow("result", self.win)
         cv2.waitKey(0)

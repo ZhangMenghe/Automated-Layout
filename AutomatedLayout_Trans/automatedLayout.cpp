@@ -11,8 +11,8 @@ float automatedLayout::cost_function() {
 	float cost = 0;
 	vector<float> constrain_params = constrains->get_all_constrain_terms();
 	//float mcv, mci, mpd, mpa, mcd, mca, mvb, mfa, mwa, mef, msy
-	float wcv = 1, wci = 0.01, wpd = 1.0, wpa = 1.0, wcd = 1.0, wca = 1.0, wvb = 0.7, wfa = 1.5, wwa = 1.5, wsy = 1.0, wef = 3.5;
-	float weights[] = {wcv,wci,wpd,wpa,wcd,wca,wvb,wfa,wwa,wsy,wef };
+	//float wcv = 1, wci = 0.01, wpd = 1.0, wpa = 1.0, wcd = 1.0, wca = 1.0, wvb = 0.7, wfa = 1.5, wwa = 1.5, wsy = 1.0, wef = 3.5;
+	//float weights[] = {wcv,wci,wpd,wpa,wcd,wca,wvb,wfa,wwa,wsy,wef };
 	for (int i = 0; i < 11; i++)
 		cost += weights[i] * constrain_params[i];
 	return cost;
@@ -157,6 +157,9 @@ void automatedLayout::setup_default_furniture() {
 	room->add_a_wall(Vec3f(40,0,0), 0, 60, 10);
 	room->add_an_object(Vec3f(0, 0, 0), 90, 10, 10, 10, TYPE_CHAIR);
 	room->add_a_focal_point(Vec3f(0, 30, 0));
+	float wcv = 1, wci = 0.01, wpd = 1.0, wpa = 1.0, wcd = 1.0, wca = 1.0, wvb = 0.7, wfa = 1.5, wwa = 1.5, wsy = 1.0, wef = 3.5;
+	float weights_array[] = {wcv,wci,wpd,wpa,wcd,wca,wvb,wfa,wwa,wsy,wef };
+	weights = vector<float>(begin(weights_array), end(weights_array));
 }
 
 void automatedLayout::display_suggestions() {
@@ -183,16 +186,29 @@ void automatedLayout::display_suggestions() {
 			wall * tmp = &room->walls[i];
 			outfile << to_string(tmp->id) << "\t|\t" << to_string(tmp->zheight) << "\t|\t" <<tmp->vertices[0] << "\t|\t" << tmp->vertices[1]<<"\r\n";
 		}
+
 		outfile << "OBJ_Id\t|\tCategory\t|\tHeight\t|\tVertices\r\n";
 		for (int i = 0; i < room->objctNum; i++) {
-			singleObj * tmp = &room->objects[i];
+			singleObj *tmp = &room->objects[i];
 			outfile << tmp->id << "\t|\t" << tmp->catalogId  << "\t|\t"<<tmp->zheight;
-			for (int i = 0; i < 2; i++)
-				outfile << "\t|\t" << tmp->origin_vertices[i];
-			outfile << "\r\n";
-			for (int res = resSize; res > 0; res--)
-				outfile << "Recommendation"<< res <<"\t|\t" << trans_result[res-1][i] << "\t|\t" <<rot_result[res-1][i]<<"\r\n";
+			for (int k = 0; k < 2; k++)
+				outfile << "\t|\t" << tmp->origin_vertices[k];
 			
+			outfile << "\r\n";
+			
+			for (int res = resSize; res > 0; res--)
+				outfile << "Recommendation" << res << "\t|\t" << trans_result[res - 1][i] << "\t|\t" << rot_result[res - 1][i] << "\r\n";
+		}
+		outfile << "FIXOBJ_Id\t|\tCategory\t|\tHeight\t|\tVertices\r\n";
+		for (int i = 0; i < room->fixedObjNum; i++) {
+			singleObj * tmp = &room->fixedObjects[i];
+			outfile << tmp->id << "\t|\t" << tmp->catalogId << "\t|\t" << tmp->zheight;
+			for (int k = 0; k < 2; k++)
+				outfile << "\t|\t" << tmp->origin_vertices[k];
+
+			outfile << "\r\n";
+			outfile << "Fixed\t|\t" << tmp->translation << "\t|\t" << tmp->zrotation << "\r\n";
+
 		}
 		outfile << "FocalPoint\t|\tPosition\r\n";
 		for (map<int, Vec3f>::iterator it = room->focalPoint_map.begin(); it != room->focalPoint_map.end(); it++)

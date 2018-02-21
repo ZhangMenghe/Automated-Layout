@@ -6,3 +6,5 @@ f : 0, 0, 0, 90, 100, 200, 10, 0
 f : 0, 0, 0, 90, 100, 200, 10, 0
 o : 0, 0, 0, 90, 100, 100, 10, 0
 p : 0, 300, 0
+# clearance, circulation, pairwise2, conversation2, balance, alignment2, emphasis2
+v : 1, 1.0, 1.0, 2.0, 1.0, 1.0, 0.7, 1.5, 1.5, 1.0, 1.0
