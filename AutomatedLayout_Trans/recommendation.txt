@@ -3,12 +3,20 @@ WALL_Id	|	zheight	|	vertices
 1	|	10.000000	|	[400, -300]	|	[400, 300]
 OBJ_Id	|	Category	|	Height	|	Vertices
 0	|	0	|	10	|	[-50, 100]	|	[50, -100]
-Recommendation3	|	[-152.742, 121.193, 0]	|	2.68832
-Recommendation2	|	[-259.178, -143.4, 0]	|	3.06539
-Recommendation1	|	[-207.533, 36.7905, 0]	|	1.04879
+Recommendation3	|	[172.188, -162.705, 0]	|	2.51034
+Recommendation2	|	[172.188, -162.705, 0]	|	2.19194
+Recommendation1	|	[173.623, -179.3, 0]	|	2.19194
 1	|	0	|	10	|	[-50, 100]	|	[50, -100]
-Recommendation3	|	[280.455, 113.989, 0]	|	2.80557
-Recommendation2	|	[78.4969, -13.8153, 0]	|	2.48286
-Recommendation1	|	[181.341, -206.177, 0]	|	1.7787
+Recommendation3	|	[-284.139, 136.496, 0]	|	2.81413
+Recommendation2	|	[-284.139, 136.496, 0]	|	2.81413
+Recommendation1	|	[-276.53, -20.8215, 0]	|	2.07614
+2	|	0	|	10	|	[-50, 100]	|	[50, -100]
+Recommendation3	|	[263.71, 103.779, 0]	|	-0.256815
+Recommendation2	|	[263.71, 103.779, 0]	|	-0.256815
+Recommendation1	|	[259.626, 49.9427, 0]	|	-0.336634
+3	|	0	|	10	|	[-50, 100]	|	[50, -100]
+Recommendation3	|	[-206.261, -144.445, 0]	|	0.968511
+Recommendation2	|	[-206.261, -144.445, 0]	|	0.968511
+Recommendation1	|	[-84.1408, -160.484, 0]	|	-0.256815
 FocalPoint	|	Position
 0	|	[0, 300, 0]

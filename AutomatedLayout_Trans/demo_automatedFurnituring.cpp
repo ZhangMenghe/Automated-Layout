@@ -48,6 +48,10 @@ void parser_inputfile(const char* filename, Room * room) {
 			groupid = parameters[i].size() == 3 ? 0 : parameters[i][3];
 			room->add_a_focal_point(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), groupid);
 			break;
+		case 'o':
+			groupid = parameters[i].size() == 8 ? 0 : parameters[i][8];
+			room->add_a_fixedObject(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), parameters[i][3], parameters[i][4], parameters[i][5], parameters[i][6], int(parameters[i][7]), groupid);
+			break;
 		default:
 			break;
 		}
