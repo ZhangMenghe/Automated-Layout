@@ -77,7 +77,7 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 
 }
 //int main(int argc, char** argv) {
-int main(){
+/*int main(){
 	char* filename;
 	/*if (argc < 2) {
 		filename = new char[9];
@@ -85,7 +85,7 @@ int main(){
 	}
 	else
 		filename = argv[1];*/
-	filename = new char[11];
+	/*filename = new char[11];
 	int r = strcpy_s(filename,11, "input.txt");
 	Room* room = new Room();
 	vector<float>weights;
@@ -98,4 +98,4 @@ int main(){
 
 	system("pause");
 	return 0;
-}
+}*/
