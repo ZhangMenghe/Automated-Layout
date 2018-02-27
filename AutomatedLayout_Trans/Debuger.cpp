@@ -1,45 +1,68 @@
 #include <iostream>
-#include "include/opencv2/core/core.hpp"
-#include "include/opencv2/highgui/highgui.hpp"
-#include "include/opencv2/imgproc/imgproc.hpp"
-
-using namespace cv;
+#include <fstream>
+//using namespace cv;
 using namespace std;
 
-int main() {
-	Mat srcImg = imread("contour_test.png", IMREAD_GRAYSCALE);
-	Canny(srcImg, srcImg, 100, 200, 3);
-
-	//Mat dst = Mat::zeros(srcImg.rows, srcImg.cols, CV_8UC3);
-	Rect bounding_rect;
-	//vector<vector<Point>> contours; // Vector for storing contour
-	//vector<Vec4i> hierarchy;
-	
-	vector<Mat> contours(1000);
-	Mat hierarchy;
-
-	int largest_area = 0;
-	int largest_contour_index = 0;
-
-	findContours(srcImg, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_NONE);
-
-	// iterate through each contour.
-	for (int i = 0; i< contours.size(); i++)
-	{
-		//  Find the area of contour
-		double a = contourArea(contours[i], false);
-		if (a>largest_area) {
-			largest_area = a; cout << i << " area  " << a << endl;
-			// Store the index of largest contour
-			largest_contour_index = i;
-			// Find the bounding rectangle for biggest contour
-			bounding_rect = boundingRect(contours[i]);
+//Mat heightMap;
+//const char * heightMap_filepath = "E:/heightMaptxt.txt";
+/*void parser_heightDataFile() {
+	ifstream instream(heightMap_filepath);
+	string str;
+	vector<vector<float>> contents;
+	char  delims[] = " :[],\t\n";
+	char * context = nullptr;
+	while (instream && getline(instream, str)) {
+		if (!str.length())
+			continue;
+		int len = 2*str.length();
+		char * charline = new char[len];
+		int r = strcpy_s(charline, len, str.c_str());
+		vector<float> row;
+		char * token = strtok_s(charline, delims, &context);
+		while (token != nullptr) {
+			if (token[0] == 'i')
+				row.push_back(.0f);
+			else
+				row.push_back(atof(token));
+			token = strtok_s(nullptr, delims, &context);
 		}
+		contents.push_back(row);
 	}
-	Scalar contourColor(255, 0, 0);
-	drawContours(srcImg, contours, -1, contourColor, 2, 8, hierarchy);
-	namedWindow("Display window", CV_WINDOW_AUTOSIZE);
-	imshow("Display window", srcImg);
-	waitKey(0);
-	return 0;
+	instream.close();
+	heightMap = Mat(contents.size(), contents[0].size(), CV_32F);
+	for (int i = 0; i < heightMap.rows; i++)
+		heightMap.row(i) = Mat(contents[i]).t();
 }
+*/
+int main() {
+	system("python C:/Projects/rgbd-processor-python/depth2mask.py");
+	system("pause");
+}
+/*int main() {
+	FILE * file;
+	//const char* filename = "C:/Users/menghe/Downloads/hello.py";
+	const char* filename = "C:/Projects/rgbd-processor-python/depth2mask.py";
+
+	int argc = 5;
+	const char ** argv;
+	Py_Initialize();
+	//PyRun_SimpleString("import numpy as np");
+	//PyRun_SimpleString("print('hello world')");
+
+	PyImport_ImportModule("sys");
+	if (PyImport_ImportModule("numpy.core.multiarray") == nullptr) {
+		PyErr_Print();
+		cout << "can not import" << endl;
+	}
+		
+	//PyRun_SimpleString("import matplotlib");
+	//fopen_s(&file, filename, "r");
+	//if(file!=nullptr)
+	//	PyRun_SimpleFile(file, filename);
+	//Py_Finalize();
+	system("pause");
+	//namedWindow("Display window", CV_WINDOW_AUTOSIZE);
+	//imshow("Display window", img);
+	//waitKey(0);
+	return 0;
+}*/
