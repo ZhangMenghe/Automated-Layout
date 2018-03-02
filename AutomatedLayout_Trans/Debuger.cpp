@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
-//using namespace cv;
+#include "include\opencv2\core.hpp"
+using namespace cv;
 using namespace std;
 
 //Mat heightMap;
@@ -34,35 +35,42 @@ using namespace std;
 		heightMap.row(i) = Mat(contents[i]).t();
 }
 */
-int main() {
+/*int main() {
 	system("python C:/Projects/rgbd-processor-python/depth2mask.py");
 	system("pause");
-}
-/*int main() {
-	FILE * file;
-	//const char* filename = "C:/Users/menghe/Downloads/hello.py";
-	const char* filename = "C:/Projects/rgbd-processor-python/depth2mask.py";
-
-	int argc = 5;
-	const char ** argv;
-	Py_Initialize();
-	//PyRun_SimpleString("import numpy as np");
-	//PyRun_SimpleString("print('hello world')");
-
-	PyImport_ImportModule("sys");
-	if (PyImport_ImportModule("numpy.core.multiarray") == nullptr) {
-		PyErr_Print();
-		cout << "can not import" << endl;
-	}
-		
-	//PyRun_SimpleString("import matplotlib");
-	//fopen_s(&file, filename, "r");
-	//if(file!=nullptr)
-	//	PyRun_SimpleFile(file, filename);
-	//Py_Finalize();
-	system("pause");
-	//namedWindow("Display window", CV_WINDOW_AUTOSIZE);
-	//imshow("Display window", img);
-	//waitKey(0);
-	return 0;
 }*/
+void graph_to_card(float width, float height, vector<Vec2f> & rect) {
+
+}
+int main() {
+	vector<Vec2f> rect1 = {Vec2f(150,100), Vec2f(350, 100), Vec2f(350,200),Vec2f(150,200) };
+	vector<Vec2f> rect2 = {Vec2f(400,200), Vec2f(500,200), Vec2f(500,300), Vec2f(400,300) };
+	vector<Vec2f> res;
+	vector<vector<Vec2f>> rectVector;
+	float width = 600, height = 400;
+
+	graph_to_card(width, height, rect1);
+	graph_to_card(width, height, rect2);
+	Vec2f c1 = (rect1[0] + rect1[2]) / 2.0f;
+	Vec2f c2 = (rect2[0] + rect2[2]) / 2.0f;
+	rectVector.push_back(rect1);
+	rectVector.push_back(rect2);
+	
+	int rectNum = 2;
+	float rectX[8], rectY[8];
+	for (int i = 0; i < rectVector.size(); i++) {
+		vector<Vec2f> trect = rectVector[i];
+		for (int j = 0; j < 4; j++) {
+			rectX[4 * i + j] = trect[0][0];
+			rectY[4 * i + j] = trect[0][1];
+		}
+	}
+	
+	// construct line equation from c1 c2
+	if (c1[0] == c2[0]) {
+		
+		res.push_back(*min_element(rectX, rectX+8));
+	}
+	
+	return 0;
+}
