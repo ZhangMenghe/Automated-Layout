@@ -1,3 +1,4 @@
+#pragma once
 #include "include\opencv2\core\core.hpp"
 #include <iostream>
 #include <fstream>
@@ -45,9 +46,9 @@ void get_bounding_xy(vector<Point2f> &r, const float cx, const int boundIdxStart
 	}
 }
 void get_bounding_vertices(const float * bound_ks, const float *bound_bs, vector<Point2f>& vertices) {
-	int realIdx[4] = {0,3,1,2};
+	int realIdx[4] = { 0,3,1,2 };
 	for (int i = 0; i < 4; i++) {
-		float interX = -(bound_bs[realIdx[(i + 1)%4]] - bound_bs[realIdx[i]]) / (bound_ks[realIdx[(i + 1) % 4]] - bound_ks[realIdx[i]]);
+		float interX = -(bound_bs[realIdx[(i + 1) % 4]] - bound_bs[realIdx[i]]) / (bound_ks[realIdx[(i + 1) % 4]] - bound_ks[realIdx[i]]);
 		float interY = bound_ks[realIdx[i]] * interX + bound_bs[realIdx[i]];
 		vertices.push_back(Point2f(interX, interY));
 	}
@@ -58,14 +59,22 @@ void write_out_file(vector<vector<Point2f>> rects) {
 	if (outfile.is_open()) {
 		outfile << "DEBUG_DRAW\t|\tvertices\r\n";
 		for (vector<vector<Point2f>>::iterator rect = rects.begin(); rect != rects.end(); rect++) {
-			for(vector<Point2f>::iterator point = rect->begin(); point!=rect->end(); point++)
-				outfile <<"["<< to_string(point->x) <<", "<<to_string(point->y)<<"]\t|\t";
+			for (vector<Point2f>::iterator point = rect->begin(); point != rect->end(); point++)
+				outfile << "[" << to_string(point->x) << ", " << to_string(point->y) << "]\t|\t";
 			outfile << "\r\n";
 		}
 	}
 	outfile.close();
 }
-int main() {
+
+vector<float> processFixedObjects(const vector<float>& parameter) {
+
+}
+
+vector<float> mergeAgroup(const vector<vector<float>> &parameters, const vector<float>groupIds) {
+
+}
+void merge2Obj(const vector<float> &parameter) {
 	vector<Point2f> rect1 = { Point2f(150,100), Point2f(350, 100), Point2f(350,200),Point2f(150,200) };
 	vector<Point2f> rect2 = { Point2f(400,200), Point2f(500,200), Point2f(500,300), Point2f(400,300) };
 	vector<Point2f> res;
@@ -95,8 +104,8 @@ int main() {
 		int boundIdx[4] = { -1 };
 		float pk; float pb;
 		line_equation_2point(c1, c2, pk, pb);
-		
-		float vk = -1/ pk; float vb;
+
+		float vk = -1 / pk; float vb;
 		//float vb = b = p.y + 1 / k * p.x;
 		get_bounding_xy(rect1, c1.x, 0, pk, pb, boundValue, boundIdx);
 		get_bounding_xy(rect2, c2.x, 4, pk, pb, boundValue, boundIdx);
@@ -113,6 +122,4 @@ int main() {
 	cout << res << endl;
 	rectVector.push_back(res);
 	write_out_file(rectVector);
-	system("pause");
-	return 0;
 }

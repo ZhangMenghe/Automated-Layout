@@ -284,6 +284,10 @@ public:
 		fixedObjNum++;
 		update_mask_by_object(&obj, furnitureMask_initial);
 	}
+	//length should be 7 
+	void add_an_object(vector<float> params) {
+		add_an_object(Vec3f(params[0], params[1], params[2]), params[3], params[4], params[5], params[6], params[7]);
+	}
 	void add_an_object(Vec3f position, float rot, float obj_width, float obj_height, float obj_zheight, int furnitureType, int groupId = 0) {
 		singleObj obj;
 		obj.id = objects.size();

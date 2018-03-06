@@ -26,6 +26,8 @@ class plotRoom():
                 state = 2
             elif(words[0]=="FIXOBJ_Id"):
             	state = 3
+            elif(words[0] == "DEBUG_DRAW"):
+                state = 4
             else:
                 if(state == 0):
                     self.draw_wall(words)
@@ -36,10 +38,13 @@ class plotRoom():
                     i+=3
                 elif(state==2):
                     self.draw_focal(words)
-                else:
+                elif(state==3):
                 	fixed = contents[i+1].split('\t|\t')
                 	self.draw_object(words, fixed)
                 	i = i+1
+                elif(state==4):
+                    self.draw_debugBox(contents[i:i+3])
+                    i = i+2
             i+=1
         cv2.imshow("result", self.win)
         cv2.waitKey(0)
@@ -68,7 +73,18 @@ class plotRoom():
         miny, minx = np.min(vertices, axis = 0)
         maxy, maxx = np.max(vertices, axis=0)
 
-        cv2.rectangle(self.win, (miny,minx), (maxy,maxx), (0,255,0),1)
+        cv2.rectangle(self.win, (miny,minx), (maxy,maxx), (0,255,0), 1)
+
+    def draw_debugBox(self, boxList):
+        cb = [0,0,255]
+        for n,box in enumerate(boxList):
+            box = box.split('\t|\t')
+            vertices = np.zeros((4,2))
+            for i in range(4):
+                vertices[i,:] = self.TransferToGraph(box[i])
+            print(vertices)
+            vertices = np.int0(vertices)
+            cv2.drawContours(self.win, [vertices], 0, color=(cb[n],255,0), thickness=2)
 
     def draw_object(self, words, recommands):
         #print(words[4])
@@ -80,6 +96,9 @@ class plotRoom():
         rot = float(recommands[2])/math.pi * 180
         center = np.array([transx,transy])
         size = np.array([abs(bx-ax), abs(by-ay)])
+        # this is very important!!
+        # minAreaRect gives a rotatedRect as tuple result(center, size, rot), serve as input of boxPoints
+        # to get bl, tl...4 points of the rotated Rect.
         vertices = np.int0(cv2.boxPoints((center,size,rot)))
         cv2.drawContours(self.win, [vertices], 0, color=(255,255,0), thickness=2)
         self.draw_boundingbox(vertices)
@@ -88,4 +107,4 @@ class plotRoom():
         x, y = self.TransferToGraph(words[1])
         cv2.circle(self.win, (int(x),int(y)), 20, (0,0,255), -1)
 
-plot_handle = plotRoom()
+plot_handle = plotRoom(winSize = (600, 400),roomSize = (600,400), resfile_name = "test.txt")
