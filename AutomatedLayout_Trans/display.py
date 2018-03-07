@@ -24,7 +24,7 @@ class plotRoom():
                 state = 1
             elif(words[0]=="FocalPoint"):
                 state = 2
-            elif(words[0]=="FIXOBJ_Id"):
+            elif(words[0]=="Obstacle"):
             	state = 3
             elif(words[0] == "DEBUG_DRAW"):
                 state = 4
@@ -39,8 +39,7 @@ class plotRoom():
                 elif(state==2):
                     self.draw_focal(words)
                 elif(state==3):
-                	self.draw_fixedObject(words)
-                	i = i+1
+                	self.draw_obstacles(words)
                 elif(state==4):
                     self.draw_debugBox(contents[i:i+3])
                     i = i+2
@@ -85,12 +84,13 @@ class plotRoom():
             # print(vertices)
             vertices = np.int0(vertices)
             cv2.drawContours(self.win, [vertices], 0, color=(cb[n],255,0), thickness=2)
-    def draw_fixedObject(self, box):
-        box = box[3:7]
+    def draw_obstacles(self, box):
         print(box)
         vertices = np.zeros((4,2))
         for i in range(4):
-            vertices[i,:] = self.TransferToGraph(box[i])
+            xg = float(box[2*i]) + self.roomSize[0]/2 + self.win_room_offx
+            yg = self.roomSize[1]/2 - float(box[2*i+1]) + self.win_room_offy
+            vertices[i,:] = xg,yg
         # print(vertices)
         vertices = np.int0(vertices)
         cv2.drawContours(self.win, [vertices], 0, color=(0,0,255), thickness=2)

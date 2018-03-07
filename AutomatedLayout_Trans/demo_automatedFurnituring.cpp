@@ -47,7 +47,7 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 			break;
 		case 'f':
 			groupid = parameters[i].size() == 8 ? 0 : parameters[i][8];
-			room->add_an_object(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), parameters[i][3], parameters[i][4], parameters[i][5], parameters[i][6], int(parameters[i][7]), groupid);
+			room->add_an_object(parameters[i], groupid);
 			break;
 		case 'p':
 			groupid = parameters[i].size() == 3 ? 0 : parameters[i][3];
@@ -72,8 +72,10 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 	//UNCOMMENT those debug parts to draw un-groupped items
 	if (mergedObjParams.size() != 0) {
 		//vector<vector<Point2f>>debug_vector;
-		for (int i = 0; i < mergedObjParams.size();i++)
-			room->add_a_fixed_Object(mergedObjParams[i]);
+		for (int i = 0; i < mergedObjParams.size(); i++)
+			room->add_an_obstacle(mergedObjParams[i]);
+			//room->add_an_object(mergedObjParams[i]);
+			//uncomment this to make those merged object as free objects
 		sort(groupedIds.begin(), groupedIds.end());
 		for (int compareIdx = fixedObjParams.size() - 1, gidx = groupedIds.size()-1; compareIdx > -1; ) {
 			if (compareIdx > groupedIds[gidx]) {
@@ -81,7 +83,7 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 				//for (int i = 0; i < 4; i++)
 				//	rect1.push_back(Point2f(fixedObjParams[compareIdx][2 * i], fixedObjParams[compareIdx][2 * i + 1]));
 				//debug_vector.push_back(rect1);
-				room->add_a_fixed_Object(fixedObjParams[compareIdx]);
+				room->add_an_object(fixedObjParams[compareIdx]);
 				compareIdx--;
 			}
 			else if (compareIdx == groupedIds[gidx]) {
@@ -94,7 +96,7 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 	}
 	else {
 		for (int i = 0; i < fixedObjParams.size(); i++)
-			room->add_a_fixed_Object(fixedObjParams[i]);
+			room->add_an_object(fixedObjParams[i]);
 	}
 
 	
@@ -123,7 +125,7 @@ int main(){
 	else
 		filename = argv[1];*/
 	filename = new char[100];
-	int r = strcpy_s(filename, 100, "layoutParam.txt");
+	int r = strcpy_s(filename, 100, "E:/layoutParam.txt");
 	Room* room = new Room();
 	vector<float>weights;
 	parser_inputfile(filename, room, weights);	

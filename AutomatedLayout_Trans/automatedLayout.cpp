@@ -47,14 +47,14 @@ void automatedLayout::random_translation(int furnitureID, default_random_engine 
 	}
 }
 void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid) {
-	int flag = rand() %3;
+	int flag = rand() %2;
 	//int flag =0;
 	unsigned seed = chrono::system_clock::now().time_since_epoch().count();
 
 	std::default_random_engine generator(seed);
-
+	int furnitureID = room->freeObjIds[rand() % room->freeObjIds.size()];
 	if (flag == 0) {		
-		int furnitureID = rand() % room->objctNum;
+		
 		ori_trans.push_back(room->objects[furnitureID].translation);
 		ori_rot.push_back(room->objects[furnitureID].zrotation);
 		selectedid.push_back(furnitureID);
@@ -64,7 +64,7 @@ void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& 
 	else if (flag == 1) {
 		//perturb_orientation();
 		std::normal_distribution<float> distribution_rot(0, PI/6);
-		int furnitureID = rand() % room->objctNum;
+		
 		singleObj* selectedObj = &room->objects[furnitureID];
 		ori_trans.push_back(selectedObj->translation);
 		ori_rot.push_back(selectedObj->zrotation);
@@ -73,31 +73,30 @@ void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& 
 	}
 	else{
 		//swap_random();
-		int objId1 = rand() % room->objctNum;
-		int objId2 = objId1;
-		while(objId2 == objId1)
-			objId2 = rand() % room->objctNum;
+		int objId2 = furnitureID;
+		while(objId2 == furnitureID)
+			objId2 = room->freeObjIds[rand() % room->freeObjIds.size()];
 
-		ori_trans.push_back(room->objects[objId1].translation);
-		ori_rot.push_back(room->objects[objId1].zrotation);
-		selectedid.push_back(objId1);
+		ori_trans.push_back(room->objects[furnitureID].translation);
+		ori_rot.push_back(room->objects[furnitureID].zrotation);
+		selectedid.push_back(furnitureID);
 		ori_trans.push_back(room->objects[objId2].translation);
 		ori_rot.push_back(room->objects[objId2].zrotation);
 		selectedid.push_back(objId2);
 
 		singleObj * obj1, *obj2;
-		obj1 = &room->objects[objId1];
+		obj1 = &room->objects[furnitureID];
 		obj2 = &room->objects[objId2];
 
 		float ori1_rot = obj1->zrotation;
-		room->set_obj_zrotation(obj2->zrotation, objId1);
+		room->set_obj_zrotation(obj2->zrotation, furnitureID);
 		room->set_obj_zrotation(ori1_rot, objId2);
 
 		float ori1x = obj1->translation[0];
 		float ori1y = obj1->translation[1];
 
-		if(!room->set_obj_translation(obj2->translation[0], obj2->translation[1], objId1))
-			random_translation(objId1, generator);
+		if(!room->set_obj_translation(obj2->translation[0], obj2->translation[1], furnitureID))
+			random_translation(furnitureID, generator);
 		if(!room->set_obj_translation(ori1x, ori1y, objId2))
 			random_translation(objId2, generator);
 	}
@@ -151,17 +150,6 @@ void automatedLayout::generate_suggestions() {
 				
 }
 
-void automatedLayout::setup_default_furniture() {
-	room = new Room();
-	//TODO:CHECK OUTBOUND
-	room->add_a_wall(Vec3f(40,0,0), 0, 60, 10);
-	room->add_an_object(Vec3f(0, 0, 0), 90, 10, 10, 10, TYPE_CHAIR);
-	room->add_a_focal_point(Vec3f(0, 30, 0));
-	float wcv = 1, wci = 0.01, wpd = 1.0, wpa = 1.0, wcd = 1.0, wca = 1.0, wvb = 0.7, wfa = 1.5, wwa = 1.5, wsy = 1.0, wef = 3.5;
-	float weights_array[] = {wcv,wci,wpd,wpa,wcd,wca,wvb,wfa,wwa,wsy,wef };
-	weights = vector<float>(begin(weights_array), end(weights_array));
-}
-
 void automatedLayout::display_suggestions() {
 	vector<vector<Vec3f>> trans_result;
 	vector<vector<float>> rot_result;
@@ -197,17 +185,15 @@ void automatedLayout::display_suggestions() {
 			for (int res = resSize; res > 0; res--)
 				outfile << "Recommendation" << res << "\t|\t" << trans_result[res - 1][i] << "\t|\t" << rot_result[res - 1][i] << "\r\n";
 		}
-		outfile << "FIXOBJ_Id\t|\tCategory\t|\tHeight\t|\tVertices\r\n";
-		for (int i = 0; i < room->fixedObjNum; i++) {
-			singleObj * tmp = &room->fixedObjects[i];
-			outfile << tmp->id << "\t|\t" << tmp->catalogId << "\t|\t" << tmp->zheight;
-			for (int k = 0; k < 4; k++)
-				outfile << "\t|\t" << tmp->vertices[k];
-
-			outfile << "\r\n";
-			outfile << "Fixed\t|\t" << tmp->translation << "\t|\t" << tmp->zrotation << "\r\n";
-
+		outfile << "Obstacle\t|\tVertices\r\n";
+		string obstacleContent = "";
+		for (int i = 0; i < room->obstacles.size(); i++) {
+			
+			for (int j = 0; j < 8; j++)
+				obstacleContent += to_string(room->obstacles[i][j]) + "\t|\t";
+			obstacleContent += "\r\n";
 		}
+		outfile << obstacleContent;
 		outfile << "FocalPoint\t|\tPosition\r\n";
 		for (map<int, Vec3f>::iterator it = room->focalPoint_map.begin(); it != room->focalPoint_map.end(); it++)
 			outfile << it->first << "\t|\t" << it->second << "\r\n";

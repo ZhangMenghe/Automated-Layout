@@ -122,11 +122,11 @@ void layoutConstrains::cal_conversation_term(float& mcd, float& mca) {
 		itemIdx = it->second;
 		for (vector<int>::iterator itx = itemIdx.begin(); itx != itemIdx.end(); ++itx) {
 			//tobj = room->objects[*itx];
-			singleObj * tobj = (*itx >= 1000) ? &room->fixedObjects[*itx - 1000] : &room->objects[*itx];
+			singleObj * tobj = &room->objects[*itx];
 
 			if (tobj->catalogId == TYPE_CHAIR) {
 				for (vector<int>::iterator ity = itx + 1; ity != itemIdx.end(); ++ity) {
-					singleObj * tmp = (*ity >= 1000) ? &room->fixedObjects[*ity - 1000] : &room->objects[*ity];
+					singleObj * tmp = &room->objects[*ity];
 					
 					if (tmp->catalogId == TYPE_CHAIR) {
 						mcd += t(dist_between_Vectors(tobj->translation, tmp->translation), CONVERSATION_M_MIN, CONVERSATION_M_MAX);
@@ -168,10 +168,10 @@ void layoutConstrains::cal_alignment_term(float& mfa, float&mwa) {
 		itemIdx = it->second;
 		for (vector<int>::iterator itx = itemIdx.begin(); itx != itemIdx.end(); ++itx) {
 			//tobj = room->objects[*itx];
-			singleObj * tobj = (*itx >= 1000) ? &room->fixedObjects[*itx - 1000] : &room->objects[*itx];
+			singleObj * tobj = &room->objects[*itx];
 
 			for (vector<int>::iterator ity = itx + 1; ity != itemIdx.end(); ++ity) {
-				singleObj * tmp = (*ity >= 1000) ? &room->fixedObjects[*ity - 1000] : &room->objects[*ity];
+				singleObj * tmp = &room->objects[*ity];
 				mfa -= cos(4 * (tobj->zrotation - tmp->zrotation));
 			}
 			mwa -= cos(4 * (tobj->zrotation - room->walls[tobj->nearestWall].zrotation - PI/2));
@@ -191,7 +191,7 @@ void layoutConstrains::get_all_reflection(map<int, Vec3f> focalPoint_map, vector
 		Vec3f focalPoint = it->second;
 		float b = focalPoint[1] - focalPoint[0] * refk;
 		for (vector<int>::iterator itx = itemIdx.begin(); itx != itemIdx.end(); ++itx) {
-			singleObj * tobj = (*itx>=1000)? &room->fixedObjects[*itx-1000]:&room->objects[*itx];
+			singleObj * tobj = &room->objects[*itx];
 			objPos = tobj->translation;
 
 
@@ -237,7 +237,7 @@ void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 			//if (*itx >= 1000)
 			//	continue;
 			//singleObj * tobj = &room->objects[*itx];
-			singleObj * tobj = (*itx >= 1000) ? &room->fixedObjects[*itx - 1000] : &room->objects[*itx];
+			singleObj * tobj = &room->objects[*itx];
 
 			Vec3f pd = focalPoint - tobj->translation;
 			float dist = dist_between_Vectors(focalPoint, tobj->translation);

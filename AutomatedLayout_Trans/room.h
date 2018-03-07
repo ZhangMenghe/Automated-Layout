@@ -14,6 +14,7 @@ using namespace cv;
 struct singleObj
 {
 	int id;
+	bool isFixed;
 	Rect2f boundingBox;
 	vector<Vec2f> vertices;
 	Vec3f translation;
@@ -54,15 +55,9 @@ private :
 	void initialize_default_pairwise_map() {
 
 	}
-	void initialize_vertices(singleObj & obj) {
-		float half_width = obj.objWidth / 2;
-		float half_height = obj.objHeight / 2;
-		float cx = obj.translation[0];
-		float cy = obj.translation[1];
-		obj.vertices.push_back(Vec2f(-half_width + cx, half_height + cy));
-		obj.vertices.push_back(Vec2f(half_width + cx, half_height + cy));
-		obj.vertices.push_back(Vec2f(half_width + cx, -half_height + cy));
-		obj.vertices.push_back(Vec2f(-half_width + cx, -half_height + cy));
+	float* get_vertices_by_pos(float cx, float cy, float half_width, float half_height) {
+		float res[8] =  { -half_width + cx, half_height + cy, half_width + cx, half_height + cy, half_width + cx, -half_height + cy, -half_width + cx, -half_height + cy };
+		return res;
 	}
 	void initialize_vertices_wall(wall & nw) {
 		float half_length = nw.width / 2;
@@ -81,6 +76,37 @@ private :
 			nw.vertices.push_back(Vec2f(nw.position[0] - half_len_proj_x, nw.position[1] - half_len_proj_y));
 		}
 
+	}
+
+	// 4*2 vertices, 2 center, 2 size, angle, label, zheight
+	void initial_object_by_parameters(vector<float>params, bool isFixed = false) {
+		singleObj obj;
+		obj.id = objects.size();
+		//vertices
+		for (int i = 0; i < 4; i++)
+			obj.vertices.push_back(Vec2f(params[2 * i], params[2 * i + 1]));
+
+		obj.translation = Vec3f(params[8], params[9], .0f);
+		obj.objWidth = params[10];
+		obj.objHeight = params[11];
+
+		obj.zrotation = params[12] * ANGLE_TO_RAD_F;
+		obj.catalogId = params[13];
+		obj.zheight = params[14];
+
+
+		update_obj_boundingBox_and_vertices(obj);
+
+		obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
+
+		objGroupMap[0].push_back(obj.id);
+
+		objects.push_back(obj);
+		objctNum++;
+		if (!isFixed)
+			freeObjIds.push_back(obj.id);
+		else
+			update_mask_by_object(&obj, true);
 	}
 	void setup_wall_equation(Vec3f m_position, float rot, float & a, float & b, float & c) {
 		a = b = c = .0f;
@@ -112,23 +138,22 @@ private :
 		else
 			drawContours(furnitureMask, contours, -1, 255, FILLED, 8);
 	}
-	
+
 public:
 	//Rect2f boundingBox;
 	Vec3f center;
 	vector<singleObj> objects;
-	vector<singleObj> fixedObjects;
 	vector<wall> walls;
 	map<int, vector<int>> objGroupMap;
 	map<int, vector<pair<int, Vec2f>>> pairMap;
 	map<int, Vec3f> focalPoint_map;
 	int objctNum;
-	int fixedObjNum;
 	int wallNum;
 	Mat_<uchar> furnitureMask;
 	float width;
 	float height;
-
+	vector<int> freeObjIds;
+	vector<vector<float>> obstacles;
 	Room(float s_width=800.0f, float s_height=600.0f) {
 		center = Vec3f(.0f, .0f, .0f);
 		objctNum = 0;
@@ -136,9 +161,19 @@ public:
 		initialize_default_pairwise_map();
 		width = s_width;
 		height = s_height;
-		setup_pairwise_map();
-		furnitureMask_initial = Mat::zeros(int(height), int(width), CV_8UC1);
+		set_pairwise_map();
+		furnitureMask_initial = Mat::zeros(int(height+1), int(width+1), CV_8UC1);
 		furnitureMask = furnitureMask_initial;
+	}
+	Point2f card_to_graphics_coord_Point(float half_width, float half_height, Vec2f vertex) {
+		return Point2f(half_width + vertex[0], half_height - vertex[1]);
+	}
+	Vec2i card_to_graphics_coord(float half_width, float half_height, float px, float py) {
+
+		int gx = int(floor(half_width + px));
+		int gy = int(floor(half_height - py));
+		//cout << gy<<"---"<<py<<endl;
+		return Vec2i(gx, gy);
 	}
 	float cal_overlapping_area(const Rect r1, const Rect r2) {
 		if (r1.x > r2.x + r2.width || r1.x + r1.width < r2.x)
@@ -151,14 +186,24 @@ public:
 			return dx*dy;
 		return 0;
 	}
+	void rot_around_point(const Vec3f& center, Vec2f& pos, float s, float c) {
+		// translate point back to origin:
+		pos[0] -= center[0];
+		pos[1] -= center[1];
+
+		// rotate point
+		float xnew = pos[0] * c - pos[1] * s;
+		float ynew = pos[0] * s + pos[1] * c;
+
+		// translate point back:
+		pos[0] = xnew + center[0];
+		pos[1] = ynew + center[1];
+	}
+
 	void set_obj_zrotation(float new_rotation, int id) {
 		objects[id].zrotation = fmod(new_rotation, PI);
 		update_obj_boundingBox_and_vertices(objects[id]);
 	}
-
-	void tiny_position_adjustment() {
-	}
-
 	bool set_obj_translation(float tx, float ty, int id) {
 		float ori_boundx = objects[id].boundingBox.x;
 		float ori_boundy = objects[id].boundingBox.y;
@@ -192,6 +237,18 @@ public:
 		for (int i = 0; i < objctNum; i++)
 			objects[i].zrotation = rotation[i];
 	}
+	void set_pairwise_map() {
+		vector<pair<int, Vec2f>> chair;
+		chair.push_back(pair <int, Vec2f>(0, Vec2f(1, 5)));
+		chair.push_back(pair <int, Vec2f>(1, Vec2f(0, COFFEETABLE_TO_SEAT)));
+		chair.push_back(pair <int, Vec2f>(3, Vec2f(0, ENDTABLE_TO_SEAT_MAX)));
+
+		vector<pair<int, Vec2f>> nightStand;
+		nightStand.push_back(pair <int, Vec2f>(5, Vec2f(1, NIGHTSTAND_TO_BED_MAX)));
+		pairMap[TYPE_CHAIR] = chair;
+		pairMap[TYPE_NIGHTSTAND] = nightStand;
+	}
+
 	vector<Vec3f> get_objs_transformation() {
 		vector<Vec3f> res;
 		for (int i = 0; i < objctNum; i++)
@@ -205,7 +262,9 @@ public:
 		return res;
 	}
 
-	
+	void add_a_focal_point(Vec3f focalpoint, int groupId = 0) {
+		focalPoint_map[groupId] = focalpoint;
+	}
 	void add_a_wall(Vec3f m_position, float rot, float w_width, float w_height) {
 		wall newWall;
 		newWall.id = walls.size();
@@ -220,78 +279,27 @@ public:
 
 	}
 
-	//length should be 7 
-	void add_an_object(vector<float> params) {
-		add_an_object(Vec3f(params[0], params[1], params[2]), params[3], params[4], params[5], params[6], params[7]);
+	void add_an_object(vector<float> params, int groupId = 0, bool isFixed = false) {
+		float* vertices;
+		if (params.size() < 15) {
+			vertices = get_vertices_by_pos(params[0], params[1], params[2], params[3]);
+			params.insert(params.begin(), vertices, vertices + 8);
+		}
+		params.push_back(groupId);
+		initial_object_by_parameters(params, isFixed);
 	}
 
-	void add_an_object(Vec3f position, float rot, float obj_width, float obj_height, float obj_zheight, int furnitureType, int groupId = 0) {
-		singleObj obj;
-		obj.id = objects.size();
-		//obj.boundingBox = Rect(tx, ty, obj_width, obj_height);
-		obj.objWidth = obj_width;
-		obj.objHeight = obj_height;
-		obj.translation = position;
-		obj.zrotation = rot * ANGLE_TO_RAD_F;
-		obj.zheight = obj_zheight;
-		obj.catalogId = furnitureType;
-		
+	void add_an_obstacle(vector<float> vertices) {
+		vector<Point> contour;
+		vector<vector<Point>> contours;
 
-		//setup bounding box and vertices
-		initialize_vertices(obj);
-		update_obj_boundingBox_and_vertices(obj);
-
-		obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
-
-		objGroupMap[groupId].push_back(obj.id);
-
-		objects.push_back(obj);
-		objctNum++;
+		for (int i = 0; i < 4; i++)
+			contour.push_back(Point(int(vertices[2*i]), int(vertices[2 * i + 1])));
+		contours.push_back(contour);
+		drawContours(furnitureMask_initial, contours, -1, 255, FILLED, 8);
+		obstacles.push_back(vertices);
 	}
-	//4 vertices, 2 center, 2 size, angle, label, zheight
-
-	void add_a_fixed_Object(vector<float> params) {
-		singleObj obj;
-		obj.id = 1000 + fixedObjects.size();
-		//vertices
-		for (int i = 0; i < 4; i++) 
-			obj.vertices.push_back(Vec2f(params[2 * i], params[2 * i + 1]));
-
-		obj.translation = Vec3f(params[8], params[9], .0f);
-		obj.objWidth = params[10];
-		obj.objHeight = params[11];
-
-		obj.zrotation = params[12] * ANGLE_TO_RAD_F;
-		obj.catalogId = params[13];
-		obj.zheight = params[14];
-		
-
-		update_obj_boundingBox_and_vertices(obj);
-
-		obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
-
-		objGroupMap[0].push_back(obj.id);
-
-		fixedObjects.push_back(obj);
-		fixedObjNum++;
-		update_mask_by_object(&obj, true);
-	}
-	void add_a_focal_point(Vec3f focalpoint, int groupId = 0) {
-		focalPoint_map[groupId] = focalpoint;
-	}
-	Vec2i card_to_graphics_coord(float half_width, float half_height, float px, float py) {
-		
-		int gx = int(floor(half_width + px));
-		int gy = int(floor(half_height - py));
-		//cout << gy<<"---"<<py<<endl;
-		return Vec2i(gx, gy);
-	}
-	Point2f card_to_graphics_coord_Point(float half_width, float half_height, Vec2f vertex) {
-		return Point2f(half_width + vertex[0], half_height - vertex[1]);
-	}
-
-
-	
+			
 	void update_obj_boundingBox_and_vertices(singleObj& obj) {
 		float s = sin(obj.zrotation);
 		float c = cos(obj.zrotation);
@@ -334,33 +342,6 @@ public:
 			obj.boundingBox.y += offsety;
 		}
 	}
-
-	void rot_around_point(const Vec3f& center, Vec2f& pos, float s, float c) {
-		// translate point back to origin:
-		pos[0] -= center[0];
-		pos[1] -= center[1];
-
-		// rotate point
-		float xnew = pos[0] * c - pos[1] * s;
-		float ynew = pos[0] * s + pos[1] * c;
-
-		// translate point back:
-		pos[0] = xnew + center[0];
-		pos[1] = ynew + center[1];
-	}
-
-	void setup_pairwise_map() {
-		vector<pair<int, Vec2f>> chair;
-		chair.push_back(pair <int, Vec2f>(0, Vec2f(1, 5)));
-		chair.push_back(pair <int, Vec2f>(1, Vec2f(0, COFFEETABLE_TO_SEAT)));
-		chair.push_back(pair <int, Vec2f>(3, Vec2f(0, ENDTABLE_TO_SEAT_MAX)));
-
-		vector<pair<int, Vec2f>> nightStand;
-		nightStand.push_back(pair <int, Vec2f>(5, Vec2f(1, NIGHTSTAND_TO_BED_MAX)));
-		pairMap[TYPE_CHAIR] = chair;
-		pairMap[TYPE_NIGHTSTAND] = nightStand;
-	}
-
 	void update_furniture_mask() {
 		furnitureMask = furnitureMask_initial;	
 		vector<vector<Point>> contours;
@@ -372,6 +353,13 @@ public:
 			contours.push_back(contour);
 		}
 		drawContours(furnitureMask, contours, -1, 255, FILLED, 8);
+	}
+	void change_obj_freeState(singleObj* obj) {
+		if (obj->isFixed)
+			freeObjIds.erase(remove(freeObjIds.begin(), freeObjIds.end(), obj->id));
+		else
+			freeObjIds.push_back(obj->id);
+		obj->isFixed = !obj->isFixed;
 	}
 };
 #endif
