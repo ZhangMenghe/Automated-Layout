@@ -1,7 +1,7 @@
 #include <iostream>
 #include "automatedLayout.h"
 #include "room.h"
-
+#include "processFixedObjects.h"
 
 using namespace cv;
 using namespace std;
@@ -32,7 +32,10 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 	
 	instream.close();
 	int itemNum = cateType.size();
+	vector<vector<float>> fixedObjParams;
+	vector<vector<float>> mergedObjParams;
 	int groupid;
+	vector<int> groupedIds;
 	for (int i = 0; i < itemNum; i++) {
 		switch (cateType[i])
 		{
@@ -51,8 +54,12 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 			room->add_a_focal_point(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), groupid);
 			break;
 		case 'o':
-			groupid = parameters[i].size() == 8 ? 0 : parameters[i][8];
-			room->add_a_fixedObject(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), parameters[i][3], parameters[i][4], parameters[i][5], parameters[i][6], int(parameters[i][7]), groupid);
+			fixedObjParams.push_back(parameters[i]);
+			break;
+		case 'g':
+			mergedObjParams.push_back(mergeAgroup(fixedObjParams, parameters[i]));
+			for (int k = 0; k < parameters[i].size(); k++)
+				groupedIds.push_back(parameters[i][k]);
 			break;
 		case 'v':
 			for (int n = 0; n < parameters[i].size(); n++)
@@ -62,6 +69,35 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 			break;
 		}
 	}
+	//UNCOMMENT those debug parts to draw un-groupped items
+	if (mergedObjParams.size() != 0) {
+		//vector<vector<Point2f>>debug_vector;
+		for (int i = 0; i < mergedObjParams.size();i++)
+			room->add_a_fixed_Object(mergedObjParams[i]);
+		sort(groupedIds.begin(), groupedIds.end());
+		for (int compareIdx = fixedObjParams.size() - 1, gidx = groupedIds.size()-1; compareIdx > -1; ) {
+			if (compareIdx > groupedIds[gidx]) {
+				//vector<Point2f> rect1;
+				//for (int i = 0; i < 4; i++)
+				//	rect1.push_back(Point2f(fixedObjParams[compareIdx][2 * i], fixedObjParams[compareIdx][2 * i + 1]));
+				//debug_vector.push_back(rect1);
+				room->add_a_fixed_Object(fixedObjParams[compareIdx]);
+				compareIdx--;
+			}
+			else if (compareIdx == groupedIds[gidx]) {
+				compareIdx--; gidx--;
+			}
+			else
+				gidx--;
+		}
+		//write_out_file(debug_vector);
+	}
+	else {
+		for (int i = 0; i < fixedObjParams.size(); i++)
+			room->add_a_fixed_Object(fixedObjParams[i]);
+	}
+
+	
 	if (weights.size() < 11) {
 		for (int i = weights.size(); i < 11; i++)
 			weights.push_back(1.0f);
@@ -77,7 +113,7 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 
 }
 //int main(int argc, char** argv) {
-/*
+
 int main(){
 	char* filename;
 	/*if (argc < 2) {
@@ -86,8 +122,8 @@ int main(){
 	}
 	else
 		filename = argv[1];*/
-	/*filename = new char[11];
-	int r = strcpy_s(filename,11, "input.txt");
+	filename = new char[100];
+	int r = strcpy_s(filename, 100, "layoutParam.txt");
 	Room* room = new Room();
 	vector<float>weights;
 	parser_inputfile(filename, room, weights);	
@@ -100,4 +136,4 @@ int main(){
 	system("pause");
 	return 0;
 }
-*/
+

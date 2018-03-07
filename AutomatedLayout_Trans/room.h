@@ -261,29 +261,7 @@ public:
 		wallNum++;
 
 	}
-	void add_a_fixedObject(Vec3f position, float rot, float obj_width, float obj_height, float obj_zheight, int furnitureType, int groupId = 0) {
-		singleObj obj;
-		obj.id = 1000+ fixedObjects.size();
-		obj.objWidth = obj_width;
-		obj.objHeight = obj_height;
-		obj.translation = position;
-		obj.zrotation = rot * ANGLE_TO_RAD_F;
-		obj.zheight = obj_zheight;
-		obj.catalogId = furnitureType;
 
-
-		//setup bounding box and vertices
-		initialize_vertices(obj);
-		update_obj_boundingBox_and_vertices(obj);
-
-		obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
-
-		objGroupMap[groupId].push_back(obj.id);
-
-		fixedObjects.push_back(obj);
-		fixedObjNum++;
-		update_mask_by_object(&obj, furnitureMask_initial);
-	}
 	//length should be 7 
 	void add_an_object(vector<float> params) {
 		add_an_object(Vec3f(params[0], params[1], params[2]), params[3], params[4], params[5], params[6], params[7]);
@@ -310,6 +288,35 @@ public:
 
 		objects.push_back(obj);
 		objctNum++;
+	}
+	//4 vertices, 2 center, 2 size, angle, label, zheight
+
+	void add_a_fixed_Object(vector<float> params) {
+		singleObj obj;
+		obj.id = 1000 + fixedObjects.size();
+		//vertices
+		for (int i = 0; i < 4; i++) 
+			obj.vertices.push_back(Vec2f(params[2 * i], params[2 * i + 1]));
+		obj.origin_vertices.push_back(obj.vertices[0]);
+		obj.origin_vertices.push_back(obj.vertices[1]);
+		obj.translation = Vec3f(params[8], params[9], .0f);
+		obj.objWidth = params[10];
+		obj.objHeight = params[11];
+
+		obj.zrotation = params[12] * ANGLE_TO_RAD_F;
+		obj.catalogId = params[13];
+		obj.zheight = params[14];
+		
+
+		update_obj_boundingBox_and_vertices(obj);
+
+		obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
+
+		objGroupMap[0].push_back(obj.id);
+
+		fixedObjects.push_back(obj);
+		fixedObjNum++;
+		update_mask_by_object(&obj, furnitureMask_initial);
 	}
 	void add_a_focal_point(Vec3f focalpoint, int groupId = 0) {
 		focalPoint_map[groupId] = focalpoint;

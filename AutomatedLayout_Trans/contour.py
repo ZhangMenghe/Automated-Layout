@@ -9,6 +9,8 @@ thresh = cv2.Canny(imgray, 100, 200)
 im2, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 clusterTooSmall = []
 hullList = []
+boundingboxList = []
+rotateboxList = []
 for i, cnt in enumerate(contours):
 	# moments
 	M = cv2.moments(cnt)
@@ -18,6 +20,13 @@ for i, cnt in enumerate(contours):
 	else:
 		hull = cv2.convexHull(cnt)
 		hullList.append(hull)
+		x,y,w,h = cv2.boundingRect(cnt)
+		boundingboxList.append(((x,y),(x+w, y+h)))
+		# rotated rectangle
+		rect = cv2.minAreaRect(cnt)
+		box = cv2.boxPoints(rect)
+		box = np.int0(box)
+		rotateboxList.append(box)
 contours = np.delete(np.array(contours), clusterTooSmall)
 
 im3 = cv2.drawContours(im, hullList, -1, (0,255,0), 1)

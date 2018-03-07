@@ -2,6 +2,7 @@
 #include "include\opencv2\core\core.hpp"
 #include <iostream>
 #include <fstream>
+#include <math.h>  
 using namespace cv;
 using namespace std;
 
@@ -55,47 +56,75 @@ void get_bounding_vertices(const float * bound_ks, const float *bound_bs, vector
 }
 void write_out_file(vector<vector<Point2f>> rects) {
 	ofstream outfile;
-	outfile.open("test.txt", 'w');
+	outfile.open("test.txt", std::fstream::out | std::fstream::app);
 	if (outfile.is_open()) {
-		outfile << "DEBUG_DRAW\t|\tvertices\r\n";
+		outfile << "DEBUG_DRAW\t|\tvertices\n";
 		for (vector<vector<Point2f>>::iterator rect = rects.begin(); rect != rects.end(); rect++) {
 			for (vector<Point2f>::iterator point = rect->begin(); point != rect->end(); point++)
 				outfile << "[" << to_string(point->x) << ", " << to_string(point->y) << "]\t|\t";
-			outfile << "\r\n";
+			outfile << "\n";
 		}
 	}
 	outfile.close();
 }
+// input:  4 vertices, center, size, angle, label, zheight
+vector<float> getUpdateInformationFromRotatedBox(const vector<Point2f>& rect){
+	//position(3), float rot, float obj_width, float obj_height
+	vector<float> res(14,0);
+	for (int i = 0; i < 4; i++) {
+		res[2 * i] = rect[i].x;
+		res[2 * i + 1] = rect[i].y;
+	}
+	res[8] = (rect[0].x + rect[2].x) / 2;
+	res[9] = (rect[0].y + rect[2].y) / 2;
 
-vector<float> processFixedObjects(const vector<float>& parameter) {
-
+	float dx01 = rect[0].x - rect[1].x; float dy01 = rect[0].y - rect[1].y;
+	float dx12 = rect[1].x - rect[2].x; float dy12 = rect[1].y - rect[2].y;
+	float dist1 = sqrt(pow(dx01,2) + pow(dy01,2));
+	float dist2 = sqrt(pow(dx12, 2) + pow(dy12, 2));
+	if (dist1 > dist2) {
+		res[10] = dist1;
+		res[11] = dist2;
+		res[12] = atan2(dx01, dy01);
+	}
+	else {
+		res[10] = dist2;
+		res[11] = dist1;
+		res[12] = atan2(dx12, dy12);
+	}
+	return res;
 }
 
-vector<float> mergeAgroup(const vector<vector<float>> &parameters, const vector<float>groupIds) {
-
+vector<vector<Point2f>> createRectFromParameters(vector<Point2f> rect1, vector<float>parameter) {
+	vector<Point2f> rect2;
+	vector<vector<Point2f>> res;
+	for (int i = 0; i < 4; i++) 
+		rect2.push_back(Point2f(parameter[2*i], parameter[2*i+1]));
+	res.push_back(rect1);
+	res.push_back(rect2);
+	return res;
 }
-void merge2Obj(const vector<float> &parameter) {
-	vector<Point2f> rect1 = { Point2f(150,100), Point2f(350, 100), Point2f(350,200),Point2f(150,200) };
-	vector<Point2f> rect2 = { Point2f(400,200), Point2f(500,200), Point2f(500,300), Point2f(400,300) };
+vector<vector<Point2f>> createRectFromParameters(vector<vector<float>> parameters, int id1, int id2) {
+	vector<Point2f> rect1;
+	for (int i = 0; i < 4; i++)
+		rect1.push_back(Point2f(parameters[id1][2 * i], parameters[id1][2 * i + 1]));
+	return createRectFromParameters(rect1, parameters[id2]);
+}
+vector<Point2f> merge2Obj(vector<vector<Point2f>> rectVector, float equal_thresh = 10.0f) {
+	//vector<Point2f> rect1 = { Point2f(150,100), Point2f(350, 100), Point2f(350,200),Point2f(150,200) };
+	//vector<Point2f> rect2 = { Point2f(400,200), Point2f(500,200), Point2f(500,300), Point2f(400,300) };
 	vector<Point2f> res;
-	vector<vector<Point2f>> rectVector;
+	vector<Point2f>* rect1 = &rectVector[0]; vector<Point2f> * rect2 = &rectVector[1];
 
-	float half_width = 300, half_height = 200;
-	float equal_thresh = 10.0;
-
-	graph_to_card(half_width, half_height, rect1);
-	graph_to_card(half_width, half_height, rect2);
-	Point2f c1 = (rect1[0] + rect1[2]) / 2.0f;
-	Point2f c2 = (rect2[0] + rect2[2]) / 2.0f;
-	rectVector.push_back(rect1);
-	rectVector.push_back(rect2);
+	Point2f c1 = (rect1->at(0) + rect1->at(2)) / 2.0f;
+	Point2f c2 = (rect2->at(0) + rect2->at(2)) / 2.0f;
 
 	// construct line equation from c1 c2
 	if (fabs(c1.x - c2.x)<equal_thresh || fabs(c1.y - c2.y)<equal_thresh) {
-		float minX = std::min({ rect1[0].x, rect1[3].x, rect2[0].x, rect2[3].x });
-		float maxX = std::max({ rect1[1].x, rect1[2].x, rect2[1].x, rect2[2].x });
-		float minY = std::min({ rect1[0].y, rect1[1].y, rect2[0].y, rect2[1].y });
-		float maxY = std::max({ rect1[2].y, rect1[3].y, rect2[2].y, rect2[3].y });
+		float minX = std::min({ rect1->at(0).x, rect1->at(3).x, rect2->at(0).x, rect2->at(3).x });
+		float maxX = std::max({ rect1->at(1).x, rect1->at(2).x, rect2->at(1).x, rect2->at(2).x });
+		float minY = std::min({ rect1->at(0).x, rect1->at(1).x, rect2->at(0).x, rect2->at(1).x });
+		float maxY = std::max({ rect1->at(2).x, rect1->at(3).x, rect2->at(2).x, rect2->at(3).x });
 		res = { Point2f(minX, maxY), Point2f(maxX, maxY), Point2f(maxX, minY),Point2f(minX,minY) };
 	}
 	else {
@@ -107,8 +136,8 @@ void merge2Obj(const vector<float> &parameter) {
 
 		float vk = -1 / pk; float vb;
 		//float vb = b = p.y + 1 / k * p.x;
-		get_bounding_xy(rect1, c1.x, 0, pk, pb, boundValue, boundIdx);
-		get_bounding_xy(rect2, c2.x, 4, pk, pb, boundValue, boundIdx);
+		get_bounding_xy(*rect1, c1.x, 0, pk, pb, boundValue, boundIdx);
+		get_bounding_xy(*rect2, c2.x, 4, pk, pb, boundValue, boundIdx);
 		//get four bounding line equation
 		Point2f pointBounding[4];
 		for (int i = 0; i<4; i++)
@@ -122,4 +151,23 @@ void merge2Obj(const vector<float> &parameter) {
 	cout << res << endl;
 	rectVector.push_back(res);
 	write_out_file(rectVector);
+	return res;
+}
+
+// input:  4 vertices, center, size, angle, label, zheight
+vector<float> mergeAgroup(const vector<vector<float>> &parameters, const vector<float>groupIds) {
+	vector<Point2f> merged;
+	float allHeights = 0;
+	for (int i = 0; i < groupIds.size() - 1; i++) {
+		if (merged.size() == 0)
+			merged = merge2Obj(createRectFromParameters(parameters, groupIds[i], groupIds[i + 1]));
+		else
+			merged = merge2Obj(createRectFromParameters(merged, parameters[groupIds[i + 1]]));
+		allHeights += parameters[groupIds[i + 1]][14];
+	}
+	vector<float> newInfos = getUpdateInformationFromRotatedBox(merged);
+	vector<float>res(newInfos.begin(), newInfos.end());
+	res.push_back(parameters[groupIds[0]][13]);
+	res.push_back((allHeights + parameters[groupIds[0]][14]) / groupIds.size());
+	return res;
 }

@@ -50,9 +50,10 @@ class plotRoom():
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def getPureNum(self, word): 
+    def getPureNum(self, word):
         for char in self.unexpected_chars:
             word = word.replace(char,"")
+
         res = word.split()
         x = float(res[0])
         y = float(res[1])
@@ -77,12 +78,13 @@ class plotRoom():
 
     def draw_debugBox(self, boxList):
         cb = [0,0,255]
+        print(boxList)
         for n,box in enumerate(boxList):
             box = box.split('\t|\t')
             vertices = np.zeros((4,2))
             for i in range(4):
                 vertices[i,:] = self.TransferToGraph(box[i])
-            print(vertices)
+            # print(vertices)
             vertices = np.int0(vertices)
             cv2.drawContours(self.win, [vertices], 0, color=(cb[n],255,0), thickness=2)
 
@@ -107,4 +109,4 @@ class plotRoom():
         x, y = self.TransferToGraph(words[1])
         cv2.circle(self.win, (int(x),int(y)), 20, (0,0,255), -1)
 
-plot_handle = plotRoom(winSize = (600, 400),roomSize = (600,400), resfile_name = "test.txt")
+plot_handle = plotRoom(winSize = (600, 400),roomSize = (600,400))#, resfile_name = "test.txt")

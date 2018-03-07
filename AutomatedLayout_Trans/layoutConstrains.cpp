@@ -258,14 +258,16 @@ void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 }
 
 vector<float> layoutConstrains::get_all_constrain_terms() {
-	float mcv, mci, mpd, mpa, mcd, mca, mvb, mfa, mwa, mef, msy;
+	float mcv =0, mci=0, mpd=0, mpa=0, mcd=0, mca=0, mvb=0, mfa=0, mwa=0, mef=0, msy=0;
 	cal_clearance_violation(mcv);
 	cal_circulation_term(mci);//single check works
 	cal_pairwise_relationship(mpd, mpa);
 	cal_conversation_term(mcd, mca);
 	cal_balance_term(mvb);
-	cal_alignment_term(mfa, mwa);
-	cal_emphasis_term(mef, msy);
+	if(room->wallNum!=0)
+		cal_alignment_term(mfa, mwa);
+	if(!room->focalPoint_map.empty())
+		cal_emphasis_term(mef, msy);
 	float parameters[] = { mcv, mci, mpd, mpa, mcd, mca, mvb, mfa, mwa, mef, msy };
 	constrain_terms.assign(parameters, parameters + 11);
 	return constrain_terms;
