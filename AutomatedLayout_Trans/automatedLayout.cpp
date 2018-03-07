@@ -179,7 +179,7 @@ void automatedLayout::display_suggestions() {
 	cout << "Min Cost is :"<<min_cost << endl;
 
 	ofstream outfile;
-	outfile.open("recommendation.txt", 'w');
+	outfile.open("E:/recommendation.txt", 'w');
 	if (outfile.is_open()) {
 		outfile << "WALL_Id\t|\tzheight\t|\tvertices\r\n";
 		for (int i = 0; i < room->wallNum; i++) {
@@ -187,12 +187,10 @@ void automatedLayout::display_suggestions() {
 			outfile << to_string(tmp->id) << "\t|\t" << to_string(tmp->zheight) << "\t|\t" <<tmp->vertices[0] << "\t|\t" << tmp->vertices[1]<<"\r\n";
 		}
 
-		outfile << "OBJ_Id\t|\tCategory\t|\tHeight\t|\tVertices\r\n";
+		outfile << "OBJ_Id\t|\tCategory\t|\tHeight\t|\tObjWidth\t|\tObjHeight\r\n";
 		for (int i = 0; i < room->objctNum; i++) {
 			singleObj *tmp = &room->objects[i];
-			outfile << tmp->id << "\t|\t" << tmp->catalogId  << "\t|\t"<<tmp->zheight;
-			for (int k = 0; k < 2; k++)
-				outfile << "\t|\t" << tmp->origin_vertices[k];
+			outfile << tmp->id << "\t|\t" << tmp->catalogId  << "\t|\t"<<tmp->zheight<< "\t|\t"<<tmp->objWidth<< "\t|\t"<<tmp->objHeight;
 			
 			outfile << "\r\n";
 			
@@ -203,8 +201,8 @@ void automatedLayout::display_suggestions() {
 		for (int i = 0; i < room->fixedObjNum; i++) {
 			singleObj * tmp = &room->fixedObjects[i];
 			outfile << tmp->id << "\t|\t" << tmp->catalogId << "\t|\t" << tmp->zheight;
-			for (int k = 0; k < 2; k++)
-				outfile << "\t|\t" << tmp->origin_vertices[k];
+			for (int k = 0; k < 4; k++)
+				outfile << "\t|\t" << tmp->vertices[k];
 
 			outfile << "\r\n";
 			outfile << "Fixed\t|\t" << tmp->translation << "\t|\t" << tmp->zrotation << "\r\n";

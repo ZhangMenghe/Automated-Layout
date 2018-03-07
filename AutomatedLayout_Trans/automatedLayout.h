@@ -1,7 +1,6 @@
 #pragma once
-#include"include\opencv2\core\core.hpp"
-#include "include\opencv2\highgui\highgui.hpp"
-#include "include\opencv2\imgproc\imgproc.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "layoutConstrains.h"
 #include "room.h"
 #include <queue>  

@@ -98,13 +98,15 @@ class plotRoom():
     def draw_object(self, words, recommands):
         #print(words[4])
         # get 2 original vertices
-        ax,ay = self.getPureNum(words[3])
-        bx,by = self.getPureNum(words[4])
-
+        # ax,ay = self.getPureNum(words[3])
+        # bx,by = self.getPureNum(words[4])
+        objWidth = float(words[3])
+        objHeight = float(words[4])
         transx, transy = self.TransferToGraph(recommands[1])
         rot = float(recommands[2])/math.pi * 180
         center = np.array([transx,transy])
-        size = np.array([abs(bx-ax), abs(by-ay)])
+        size = np.array([objWidth, objHeight])
+        # size = np.array([abs(bx-ax), abs(by-ay)])
         # this is very important!!
         # minAreaRect gives a rotatedRect as tuple result(center, size, rot), serve as input of boxPoints
         # to get bl, tl...4 points of the rotated Rect.
@@ -116,4 +118,4 @@ class plotRoom():
         x, y = self.TransferToGraph(words[1])
         cv2.circle(self.win, (int(x),int(y)), 20, (0,0,255), -1)
 
-plot_handle = plotRoom(winSize = (600, 400),roomSize = (600,400))#, resfile_name = "test.txt")
+plot_handle = plotRoom(resfile_name = "E:/recommendation.txt" )

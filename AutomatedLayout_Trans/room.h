@@ -2,8 +2,9 @@
 #include <vector>
 #include <map>
 #include <utility>
-#include "include\opencv2\core.hpp"
+#include "include/opencv2/core.hpp"
 #include "predefinedConstrains.h"
+
 //#include "utils.h"
 using namespace std;
 using namespace cv;
@@ -15,7 +16,6 @@ struct singleObj
 	int id;
 	Rect2f boundingBox;
 	vector<Vec2f> vertices;
-	vector<Vec2f> origin_vertices;
 	Vec3f translation;
 	float zrotation;
 	float objWidth, objHeight;
@@ -63,11 +63,6 @@ private :
 		obj.vertices.push_back(Vec2f(half_width + cx, half_height + cy));
 		obj.vertices.push_back(Vec2f(half_width + cx, -half_height + cy));
 		obj.vertices.push_back(Vec2f(-half_width + cx, -half_height + cy));
-
-		obj.origin_vertices.push_back(Vec2f(-half_width, half_height));
-		//obj.vertices.push_back(Vec2f(half_width, half_height));
-		obj.origin_vertices.push_back(Vec2f(half_width, -half_height));
-		//obj.vertices.push_back(Vec2f(-half_width, -half_height));
 	}
 	void initialize_vertices_wall(wall & nw) {
 		float half_length = nw.width / 2;
@@ -105,56 +100,19 @@ private :
 			c = m_position[1] - a * m_position[0];
 		}
 	}
-	void fill_part_mask(Mat_<uchar> &matrix, float k1, float k2, float b1, float b2, float y_max, float y_min, float half_width, float half_height) {
-		y_min = (y_min > -half_height) ? y_min : -half_height + 1;
-		y_max = (y_max < half_height) ? y_max : half_height - 1;
-		for (float ty = y_min; ty < y_max; ty++) {
-			Vec2i ps = card_to_graphics_coord(half_width, half_height, k1*ty + b1, ty);
-			Vec2i pe = card_to_graphics_coord(half_width, half_height, k2*ty + b2, ty);
-			for (int tx = ps[0]; tx < pe[0]; tx++)
-				matrix[ps[1]][tx] = 1;
-		}
-	}
-	void update_mask_by_object(const singleObj * obj, Mat_<uchar> &matrix) {
-		float half_width = width / 2;
-		float half_height = height / 2;
-		//use bounding box
-		if (fmod(obj->zrotation, PI / 2) < 0.01f) {
-			//left-top point
-			Vec2i ps = card_to_graphics_coord(half_width, half_height, obj->boundingBox.x, obj->boundingBox.y);
-			int rows = std::min(int(ceil(obj->boundingBox.height)) + ps[1], int(height-1));
-			int cols = std::min(int(ceil(obj->boundingBox.width)) + ps[0], int(width-1));
-			for (int ty = ps[1]; ty < rows; ty++) {
-				for (int tx = ps[0]; tx < cols; tx++)
-					matrix[ty][tx] = 1;
-			}
-		}
-		//use vertices
-		else {
-			vector<float> k(4);
-			vector<float> b(4);
-			//x = ky+b
-			Vec2f p1, p2;
+	void update_mask_by_object(const singleObj* obj, bool changeInitial = false) {
+		vector<Point> contour;
+		vector<vector<Point>> contours;
 
-			for (int i = 0; i < 4; i++) {
-				p1 = obj->vertices[i]; p2 = obj->vertices[(i + 1) % 4];
-				k[i] = (p2[0] - p1[0]) / (p2[1] - p1[1]);
-				b[i] = p1[0] - k[i] * p1[1];
-			}
-			if (obj->vertices[0][1] <= obj->vertices[2][1]) {
-				fill_part_mask(matrix, k[0], k[1], b[0], b[1], obj->boundingBox.y,  obj->vertices[2][1], half_width, half_height);
-				fill_part_mask(matrix, k[0], k[2], b[0], b[2], obj->vertices[2][1], obj->vertices[0][1], half_width, half_height);
-				fill_part_mask(matrix, k[3], k[2], b[3], b[2], obj->vertices[0][1], obj->vertices[3][1], half_width, half_height);
-			}
-			else {
-				fill_part_mask(matrix, k[0], k[1], b[0], b[1], obj->boundingBox.y, obj->vertices[0][1], half_width, half_height);
-				fill_part_mask(matrix, k[0], k[2], b[0], b[2], obj->vertices[0][1], obj->vertices[2][1], half_width, half_height);
-				fill_part_mask(matrix, k[3], k[2], b[3], b[2], obj->vertices[2][1], obj->vertices[3][1], half_width, half_height);
-			}
-		}
-
-		
+		for (int i = 0; i < 4; i++)
+			contour.push_back(Point(int(obj->vertices[i][0]), int(obj->vertices[i][1])));
+		contours.push_back(contour);
+		if(changeInitial)
+			drawContours(furnitureMask_initial, contours, -1, 255, FILLED, 8);
+		else
+			drawContours(furnitureMask, contours, -1, 255, FILLED, 8);
 	}
+	
 public:
 	//Rect2f boundingBox;
 	Vec3f center;
@@ -179,7 +137,7 @@ public:
 		width = s_width;
 		height = s_height;
 		setup_pairwise_map();
-		furnitureMask_initial = Mat::zeros(int(height), int(width), CV_8U);
+		furnitureMask_initial = Mat::zeros(int(height), int(width), CV_8UC1);
 		furnitureMask = furnitureMask_initial;
 	}
 	float cal_overlapping_area(const Rect r1, const Rect r2) {
@@ -316,7 +274,7 @@ public:
 
 		fixedObjects.push_back(obj);
 		fixedObjNum++;
-		update_mask_by_object(&obj, furnitureMask_initial);
+		update_mask_by_object(&obj, true);
 	}
 	void add_a_focal_point(Vec3f focalpoint, int groupId = 0) {
 		focalPoint_map[groupId] = focalpoint;
@@ -332,13 +290,7 @@ public:
 		return Point2f(half_width + vertex[0], half_height - vertex[1]);
 	}
 
-	void update_furniture_mask() {
-		furnitureMask = furnitureMask_initial;
-		for (int i = 0; i < objctNum; i++) {
-			singleObj * obj = &objects[i];
-			update_mask_by_object(obj, furnitureMask);
-		}
-	}
+
 	
 	void update_obj_boundingBox_and_vertices(singleObj& obj) {
 		float s = sin(obj.zrotation);
@@ -407,6 +359,19 @@ public:
 		nightStand.push_back(pair <int, Vec2f>(5, Vec2f(1, NIGHTSTAND_TO_BED_MAX)));
 		pairMap[TYPE_CHAIR] = chair;
 		pairMap[TYPE_NIGHTSTAND] = nightStand;
+	}
+
+	void update_furniture_mask() {
+		furnitureMask = furnitureMask_initial;	
+		vector<vector<Point>> contours;
+		for (int i = 0; i < objctNum; i++) {
+			singleObj * obj = &objects[i];
+			vector<Point> contour;
+			for (int n = 0; n < 4; n++)
+				contour.push_back(Point(int(obj->vertices[i][0]), int(obj->vertices[i][1])));
+			contours.push_back(contour);
+		}
+		drawContours(furnitureMask, contours, -1, 255, FILLED, 8);
 	}
 };
 #endif
