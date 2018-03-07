@@ -266,6 +266,7 @@ public:
 	void add_an_object(vector<float> params) {
 		add_an_object(Vec3f(params[0], params[1], params[2]), params[3], params[4], params[5], params[6], params[7]);
 	}
+
 	void add_an_object(Vec3f position, float rot, float obj_width, float obj_height, float obj_zheight, int furnitureType, int groupId = 0) {
 		singleObj obj;
 		obj.id = objects.size();
@@ -297,8 +298,7 @@ public:
 		//vertices
 		for (int i = 0; i < 4; i++) 
 			obj.vertices.push_back(Vec2f(params[2 * i], params[2 * i + 1]));
-		obj.origin_vertices.push_back(obj.vertices[0]);
-		obj.origin_vertices.push_back(obj.vertices[1]);
+
 		obj.translation = Vec3f(params[8], params[9], .0f);
 		obj.objWidth = params[10];
 		obj.objHeight = params[11];

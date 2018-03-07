@@ -39,8 +39,7 @@ class plotRoom():
                 elif(state==2):
                     self.draw_focal(words)
                 elif(state==3):
-                	fixed = contents[i+1].split('\t|\t')
-                	self.draw_object(words, fixed)
+                	self.draw_fixedObject(words)
                 	i = i+1
                 elif(state==4):
                     self.draw_debugBox(contents[i:i+3])
@@ -78,7 +77,6 @@ class plotRoom():
 
     def draw_debugBox(self, boxList):
         cb = [0,0,255]
-        print(boxList)
         for n,box in enumerate(boxList):
             box = box.split('\t|\t')
             vertices = np.zeros((4,2))
@@ -87,6 +85,15 @@ class plotRoom():
             # print(vertices)
             vertices = np.int0(vertices)
             cv2.drawContours(self.win, [vertices], 0, color=(cb[n],255,0), thickness=2)
+    def draw_fixedObject(self, box):
+        box = box[3:7]
+        print(box)
+        vertices = np.zeros((4,2))
+        for i in range(4):
+            vertices[i,:] = self.TransferToGraph(box[i])
+        # print(vertices)
+        vertices = np.int0(vertices)
+        cv2.drawContours(self.win, [vertices], 0, color=(0,0,255), thickness=2)
 
     def draw_object(self, words, recommands):
         #print(words[4])
