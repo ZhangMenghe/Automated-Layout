@@ -95,7 +95,7 @@ private :
 		obj.catalogId = params[13];
 		obj.zheight = params[14];
 		obj.area = obj.objWidth * obj.objHeight;
-
+		indepenFurArea += obj.area;
 		update_obj_boundingBox_and_vertices(obj);
 
 		obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
@@ -104,10 +104,13 @@ private :
 
 		objects.push_back(obj);
 		objctNum++;
-		if (!isFixed)
+		if (!isFixed) {
+			update_mask_by_object(&obj, furnitureMask);
 			freeObjIds.push_back(obj.id);
+		}
 		else
-			update_mask_by_object(&obj, furnitureMask_initial);
+			update_mask_by_object(&obj, furnitureMask_initial);//is a fixed object
+		float test = cv::sum(furnitureMask)[0];
 	}
 	void setup_wall_equation(Vec3f m_position, float rot, float & a, float & b, float & c) {
 		a = b = c = .0f;
@@ -132,18 +135,18 @@ private :
 		vector<Point> contour;
 		vector<vector<Point>> contours;
 		for (int i = 0; i < 4; i++)
-			contour.push_back(Point(int(obj->vertices[i][0]), int(obj->vertices[i][1])));
+			contour.push_back(card_to_graph_point(obj->vertices[i][0], obj->vertices[i][1]));
 		contours.push_back(contour);
 		if (movex != -1) {
 			drawContours(target, contours, 0, 0, FILLED, 8);
 			vector<Point> contour2;
 			for (int i = 0; i < 4; i++)
-				contour2.push_back(Point(int(movex + obj->vertices[i][0]), int(movey + obj->vertices[i][1])));
+				contour2.push_back(card_to_graph_point(movex + obj->vertices[i][0], movey + obj->vertices[i][1]));
 			contours.push_back(contour2);
 			drawContours(target, contours, 1, 1, FILLED, 8);
 		}
 		else
-			drawContours(target, contours, 0, 1, FILLED, 8);		
+			drawContours(target, contours,-1, 1, FILLED, 8);
 	}
 
 public:
@@ -157,8 +160,10 @@ public:
 	int objctNum;
 	int wallNum;
 	Mat_<uchar> furnitureMask;
-	float width;
-	float height;
+	float half_width;
+	float half_height;
+	float indepenFurArea;
+	float obstacleArea;
 	vector<int> freeObjIds;
 	vector<vector<float>> obstacles;
 	Room(float s_width=800.0f, float s_height=600.0f) {
@@ -166,22 +171,18 @@ public:
 		objctNum = 0;
 		wallNum = 0;
 		initialize_default_pairwise_map();
-		width = s_width;
-		height = s_height;
+		half_width = s_width/2;
+		half_height = s_height/2;
+		indepenFurArea = 0;
+		obstacleArea = 0;
 		set_pairwise_map();
-		furnitureMask_initial = Mat::zeros(int(height+1), int(width+1), CV_8UC1);
+		furnitureMask_initial = Mat::zeros(int(s_width +1), int(s_height +1), CV_8UC1);
 		furnitureMask = furnitureMask_initial;
 	}
-	Point2f card_to_graphics_coord_Point(float half_width, float half_height, Vec2f vertex) {
-		return Point2f(half_width + vertex[0], half_height - vertex[1]);
+	Point card_to_graph_point(float x, float y) {
+		return Point(int(half_width + x), int(half_height - y));
 	}
-	Vec2i card_to_graphics_coord(float half_width, float half_height, float px, float py) {
 
-		int gx = int(floor(half_width + px));
-		int gy = int(floor(half_height - py));
-		//cout << gy<<"---"<<py<<endl;
-		return Vec2i(gx, gy);
-	}
 	float cal_overlapping_area(const Rect r1, const Rect r2) {
 		if (r1.x > r2.x + r2.width || r1.x + r1.width < r2.x)
 			return 0;
@@ -281,7 +282,7 @@ public:
 
 	void add_an_object(vector<float> params, int groupId = 0, bool isFixed = false) {
 		if (params.size() < 15) {
-			vector<float> vertices = get_vertices_by_pos(params[0], params[1], params[2], params[3]);
+			vector<float> vertices = get_vertices_by_pos(params[0], params[1], params[2]/2, params[3]/2);
 			params.insert(params.begin(), vertices.begin(), vertices.end());
 		}
 		params.push_back(groupId);
@@ -293,9 +294,11 @@ public:
 		vector<vector<Point>> contours;
 
 		for (int i = 0; i < 4; i++)
-			contour.push_back(Point(int(vertices[2*i]), int(vertices[2 * i + 1])));
+			contour.push_back(card_to_graph_point(vertices[2 * i], vertices[2 * i + 1]));
 		contours.push_back(contour);
 		drawContours(furnitureMask_initial, contours, -1, 1, FILLED, 8);
+		obstacleArea = cv::sum(furnitureMask_initial)[0];
+		cout << "obstacleArea:  " << obstacleArea<<endl;
 		obstacles.push_back(vertices);
 	}
 			
@@ -322,7 +325,6 @@ public:
 		obj.boundingBox = Rect2f(min_x, max_y, (max_x - min_x), (max_y - min_y));
 
 		float offsetx = .0f, offsety = .0f;
-		float half_width = width / 2, half_height = height / 2;
 
 		if (obj.boundingBox.x < -half_width)
 			offsetx = -half_width - obj.boundingBox.x+1;
@@ -349,7 +351,7 @@ public:
 			singleObj * obj = &objects[i];
 			vector<Point> contour;
 			for (int n = 0; n < 4; n++)
-				contour.push_back(Point(int(obj->vertices[n][0]), int(obj->vertices[n][1])));
+				contour.push_back(card_to_graph_point(obj->vertices[n][0], obj->vertices[n][1]));
 			contours.push_back(contour);
 		}
 		drawContours(furnitureMask, contours, -1, 1, FILLED, 8);

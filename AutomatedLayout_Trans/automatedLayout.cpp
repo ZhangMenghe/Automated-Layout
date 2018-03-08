@@ -24,10 +24,9 @@ float automatedLayout::density_function(float cost) {
 }
 void automatedLayout::random_translation(int furnitureID, default_random_engine generator) {
 	singleObj *selectedObj = &room->objects[furnitureID];
-	std::normal_distribution<float> distribution_width(0, room->width / 6);
-	std::normal_distribution<float> distribution_height(0, room->height / 6);
-	float half_width = room->width / 2;
-	float half_height = room->height / 2;
+	std::normal_distribution<float> distribution_width(0, room->half_width / 3);
+	std::normal_distribution<float> distribution_height(0, room->half_height / 3);
+
 	Rect2f * boundingbox = &selectedObj->boundingBox;
 	float tx, ty;
 	//cout << "translate:" << endl;
@@ -35,8 +34,8 @@ void automatedLayout::random_translation(int furnitureID, default_random_engine 
 		tx = distribution_width(generator);
 		ty = distribution_height(generator);
 
-		while (boundingbox->x + tx <= -half_width || boundingbox->x + boundingbox->width + tx >= half_width
-			|| boundingbox->y + ty >= half_height || boundingbox->y - boundingbox->height + ty <= -half_height) {
+		while (boundingbox->x + tx <= -room->half_width || boundingbox->x + boundingbox->width + tx >= room->half_width
+			|| boundingbox->y + ty >= room->half_height || boundingbox->y - boundingbox->height + ty <= -room->half_height) {
 			tx = distribution_width(generator);
 			ty = distribution_height(generator);
 		}
@@ -141,7 +140,7 @@ void automatedLayout::Metropolis_Hastings() {
 }
 
 void automatedLayout::generate_suggestions() {
-	for (int i = 0; i < 1000; i++) {
+	for (int i = 0; i < 100; i++) {
 		cout << "Times:" << i << endl;
 		Metropolis_Hastings();
 	}

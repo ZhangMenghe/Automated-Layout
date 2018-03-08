@@ -60,12 +60,14 @@ float layoutConstrains::t(float d, float m, float M, int a) {
 // Mcv(I) that minimize the overlap between furniture(with space)
 // the minimal the better
 void layoutConstrains::cal_clearance_violation(float& mcv) {
-	mcv = 0;
-	for (int i = 0; i < room->objctNum; i++) {		
+	/*for (int i = 0; i < room->objctNum; i++) {		
 		for (int j = i + 1; j < room->objctNum; j++) {
 			mcv += room->cal_overlapping_area(room->objects[i].boundingBox, room->objects[j].boundingBox);
 		}
-	}
+	}*/
+	float overlappingFurArea= (cv::sum(room->furnitureMask)[0] - room->obstacleArea);
+	mcv = room->indepenFurArea - overlappingFurArea;
+	cout << mcv << endl;
 }
 void Dilation(const Mat& src, Mat& dilation_dst, int dilation_size, int dilation_type = 0) {
 	/*if( erosion_elem == 0 ){ erosion_type = MORPH_RECT; }

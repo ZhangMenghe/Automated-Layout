@@ -115,15 +115,15 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 
 }
 //int main(int argc, char** argv) {
-
+/*if (argc < 2) {
+filename = new char[9];
+strcpy(filename, "input.txt");
+}
+else
+filename = argv[1];*/
 int main(){
 	char* filename;
-	/*if (argc < 2) {
-		filename = new char[9];
-		strcpy(filename, "input.txt");
-	}
-	else
-		filename = argv[1];*/
+
 	filename = new char[100];
 	int r = strcpy_s(filename, 100, "E:/layoutParam.txt");
 	Room* room = new Room();
