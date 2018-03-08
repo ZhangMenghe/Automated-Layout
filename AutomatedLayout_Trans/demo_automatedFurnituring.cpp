@@ -46,8 +46,8 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 			room->add_a_wall(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), parameters[i][3], parameters[i][4], parameters[i][5]);
 			break;
 		case 'f':
-			groupid = parameters[i].size() == 8 ? 0 : parameters[i][8];
-			room->add_an_object(parameters[i], groupid);
+			//groupid = parameters[i].size() == 8 ? 0 : parameters[i][8];
+			room->add_an_object(parameters[i], 0);
 			break;
 		case 'p':
 			groupid = parameters[i].size() == 3 ? 0 : parameters[i][3];

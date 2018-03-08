@@ -23,6 +23,7 @@ struct singleObj
 	float zheight;
 	int nearestWall;
 	int catalogId;
+	float area;
 };
 
 struct wall
@@ -55,9 +56,9 @@ private :
 	void initialize_default_pairwise_map() {
 
 	}
-	float* get_vertices_by_pos(float cx, float cy, float half_width, float half_height) {
+	vector<float> get_vertices_by_pos(float cx, float cy, float half_width, float half_height) {
 		float res[8] =  { -half_width + cx, half_height + cy, half_width + cx, half_height + cy, half_width + cx, -half_height + cy, -half_width + cx, -half_height + cy };
-		return res;
+		return vector<float> (res, res + 8);
 	}
 	void initialize_vertices_wall(wall & nw) {
 		float half_length = nw.width / 2;
@@ -93,7 +94,7 @@ private :
 		obj.zrotation = params[12] * ANGLE_TO_RAD_F;
 		obj.catalogId = params[13];
 		obj.zheight = params[14];
-
+		obj.area = obj.objWidth * obj.objHeight;
 
 		update_obj_boundingBox_and_vertices(obj);
 
@@ -106,7 +107,7 @@ private :
 		if (!isFixed)
 			freeObjIds.push_back(obj.id);
 		else
-			update_mask_by_object(&obj, true);
+			update_mask_by_object(&obj, furnitureMask_initial);
 	}
 	void setup_wall_equation(Vec3f m_position, float rot, float & a, float & b, float & c) {
 		a = b = c = .0f;
@@ -126,17 +127,23 @@ private :
 			c = m_position[1] - a * m_position[0];
 		}
 	}
-	void update_mask_by_object(const singleObj* obj, bool changeInitial = false) {
+	
+	void update_mask_by_object(const singleObj* obj, Mat_<uchar> & target, float movex = -1, float movey=-1) {
 		vector<Point> contour;
 		vector<vector<Point>> contours;
-
 		for (int i = 0; i < 4; i++)
 			contour.push_back(Point(int(obj->vertices[i][0]), int(obj->vertices[i][1])));
 		contours.push_back(contour);
-		if(changeInitial)
-			drawContours(furnitureMask_initial, contours, -1, 255, FILLED, 8);
+		if (movex != -1) {
+			drawContours(target, contours, 0, 0, FILLED, 8);
+			vector<Point> contour2;
+			for (int i = 0; i < 4; i++)
+				contour2.push_back(Point(int(movex + obj->vertices[i][0]), int(movey + obj->vertices[i][1])));
+			contours.push_back(contour2);
+			drawContours(target, contours, 1, 1, FILLED, 8);
+		}
 		else
-			drawContours(furnitureMask, contours, -1, 255, FILLED, 8);
+			drawContours(target, contours, 0, 1, FILLED, 8);		
 	}
 
 public:
@@ -204,39 +211,31 @@ public:
 		objects[id].zrotation = fmod(new_rotation, PI);
 		update_obj_boundingBox_and_vertices(objects[id]);
 	}
-	bool set_obj_translation(float tx, float ty, int id) {
-		float ori_boundx = objects[id].boundingBox.x;
-		float ori_boundy = objects[id].boundingBox.y;
 
+	bool set_obj_translation(float tx, float ty, int id) {
+		Mat_<uchar> tmpCanvas = furnitureMask;
 		float movex = tx - objects[id].translation[0];
 		float movey = ty - objects[id].translation[1];
-		objects[id].boundingBox.x += movex;
-		objects[id].boundingBox.y += movey;
-		
 
-		for (int i = 0; i < objctNum; i++) {
-			if (i != id) {
-				float overlapping_ratio = cal_overlapping_area(objects[i].boundingBox, objects[id].boundingBox) / objects[id].boundingBox.area();
-				if (overlapping_ratio != 0){
-					objects[id].boundingBox.x = ori_boundx;
-					objects[id].boundingBox.y = ori_boundy;
-					return false;
-				}	
-			}
-		}
+		update_mask_by_object(&objects[id], tmpCanvas, movex, movey);
+
+		if (cv::sum(furnitureMask)[0] + objects[id].area < cv::sum(tmpCanvas)[0])
+			return false;
+
 		objects[id].translation[0] = tx;
 		objects[id].translation[1] = ty;
-
 		for (int i = 0; i < 4; i++) {
 			objects[id].vertices[i][0] += movex;
 			objects[id].vertices[i][1] += movey;
 		}
 		return true;
 	}
+
 	void set_objs_rotation(vector<float> rotation) {
 		for (int i = 0; i < objctNum; i++)
 			objects[i].zrotation = rotation[i];
 	}
+
 	void set_pairwise_map() {
 		vector<pair<int, Vec2f>> chair;
 		chair.push_back(pair <int, Vec2f>(0, Vec2f(1, 5)));
@@ -255,6 +254,7 @@ public:
 			res.push_back( objects[i].translation );
 		return res;
 	}
+
 	vector<float> get_objs_rotation() {
 		vector<float> res;
 		for (int i = 0; i < objctNum; i++)
@@ -280,10 +280,9 @@ public:
 	}
 
 	void add_an_object(vector<float> params, int groupId = 0, bool isFixed = false) {
-		float* vertices;
 		if (params.size() < 15) {
-			vertices = get_vertices_by_pos(params[0], params[1], params[2], params[3]);
-			params.insert(params.begin(), vertices, vertices + 8);
+			vector<float> vertices = get_vertices_by_pos(params[0], params[1], params[2], params[3]);
+			params.insert(params.begin(), vertices.begin(), vertices.end());
 		}
 		params.push_back(groupId);
 		initial_object_by_parameters(params, isFixed);
@@ -296,7 +295,7 @@ public:
 		for (int i = 0; i < 4; i++)
 			contour.push_back(Point(int(vertices[2*i]), int(vertices[2 * i + 1])));
 		contours.push_back(contour);
-		drawContours(furnitureMask_initial, contours, -1, 255, FILLED, 8);
+		drawContours(furnitureMask_initial, contours, -1, 1, FILLED, 8);
 		obstacles.push_back(vertices);
 	}
 			
@@ -328,7 +327,7 @@ public:
 		if (obj.boundingBox.x < -half_width)
 			offsetx = -half_width - obj.boundingBox.x+1;
 		else if (obj.boundingBox.x + obj.boundingBox.width > half_width)
-			offsetx = obj.boundingBox.x + obj.boundingBox.width - half_width-1;
+			offsetx = half_width+1- obj.boundingBox.x - obj.boundingBox.width;
 		if (obj.boundingBox.y > half_height)
 			offsety = half_height- obj.boundingBox.y-1;
 		else if (obj.boundingBox.y - obj.boundingBox.height < -half_height)
@@ -342,6 +341,7 @@ public:
 			obj.boundingBox.y += offsety;
 		}
 	}
+
 	void update_furniture_mask() {
 		furnitureMask = furnitureMask_initial;	
 		vector<vector<Point>> contours;
@@ -349,10 +349,10 @@ public:
 			singleObj * obj = &objects[i];
 			vector<Point> contour;
 			for (int n = 0; n < 4; n++)
-				contour.push_back(Point(int(obj->vertices[i][0]), int(obj->vertices[i][1])));
+				contour.push_back(Point(int(obj->vertices[n][0]), int(obj->vertices[n][1])));
 			contours.push_back(contour);
 		}
-		drawContours(furnitureMask, contours, -1, 255, FILLED, 8);
+		drawContours(furnitureMask, contours, -1, 1, FILLED, 8);
 	}
 	void change_obj_freeState(singleObj* obj) {
 		if (obj->isFixed)

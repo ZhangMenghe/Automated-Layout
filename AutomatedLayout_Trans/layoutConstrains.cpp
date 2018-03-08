@@ -84,7 +84,6 @@ void Dilation(const Mat& src, Mat& dilation_dst, int dilation_size, int dilation
 //represent a person with radius = 18
 void layoutConstrains::cal_circulation_term(float& mci) {
 	Mat dilation_dst;
-	room->update_furniture_mask();
 	Dilation(room->furnitureMask, dilation_dst, PersonArea);
 	mci = sum(dilation_dst)[0];
 }

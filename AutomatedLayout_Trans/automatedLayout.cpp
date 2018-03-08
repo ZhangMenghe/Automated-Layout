@@ -47,8 +47,8 @@ void automatedLayout::random_translation(int furnitureID, default_random_engine 
 	}
 }
 void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid) {
-	int flag = rand() %2;
-	//int flag =0;
+	int flag = rand() %3;
+	//int flag = 1;
 	unsigned seed = chrono::system_clock::now().time_since_epoch().count();
 
 	std::default_random_engine generator(seed);
@@ -88,12 +88,14 @@ void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& 
 		obj1 = &room->objects[furnitureID];
 		obj2 = &room->objects[objId2];
 
+		// store obj1 pos/rot temperately
 		float ori1_rot = obj1->zrotation;
+		float ori1x = obj1->translation[0];
+		float ori1y = obj1->translation[1];
+
 		room->set_obj_zrotation(obj2->zrotation, furnitureID);
 		room->set_obj_zrotation(ori1_rot, objId2);
 
-		float ori1x = obj1->translation[0];
-		float ori1y = obj1->translation[1];
 
 		if(!room->set_obj_translation(obj2->translation[0], obj2->translation[1], furnitureID))
 			random_translation(furnitureID, generator);
@@ -123,14 +125,9 @@ void automatedLayout::Metropolis_Hastings() {
 	if (alpha > t) {
 		for (int i = 0; i < perturb_id.size(); i++) {
 			room->set_obj_translation(perturb_ori_trans[i][0], perturb_ori_trans[i][1], perturb_id[i]);
-			//room->objects[perturb_id[i]].zrotation = perturb_ori_rot[i];
 			room->set_obj_zrotation(perturb_ori_rot[i], perturb_id[i]);
 		}
 	}
-	/*else {
-		cout << "move" << endl;
-	}*/
-	//cout << cost<<endl;
 	if (cost < min_cost) {
 		res_rotation.push(room->get_objs_rotation());
 		res_transform.push(room->get_objs_transformation());
@@ -139,6 +136,7 @@ void automatedLayout::Metropolis_Hastings() {
 			res_transform.pop();
 		}
 		min_cost = cost;
+		room->update_furniture_mask();
 	}
 }
 
