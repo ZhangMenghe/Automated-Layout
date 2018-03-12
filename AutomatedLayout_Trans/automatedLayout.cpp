@@ -140,7 +140,7 @@ void automatedLayout::Metropolis_Hastings() {
 }
 
 void automatedLayout::generate_suggestions() {
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 1000; i++) {
 		cout << "Times:" << i << endl;
 		Metropolis_Hastings();
 	}

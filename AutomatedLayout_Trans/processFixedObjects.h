@@ -148,7 +148,6 @@ vector<Point2f> merge2Obj(vector<vector<Point2f>> rectVector, float equal_thresh
 			bound_bs[i] = pointBounding[i].y - bound_ks[i] * pointBounding[i].x;
 		get_bounding_vertices(bound_ks, bound_bs, res);
 	}
-	cout << res << endl;
 	rectVector.push_back(res);
 	write_out_file(rectVector);
 	return res;

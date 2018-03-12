@@ -28,7 +28,7 @@ float dist_between_Vectors(const Vec3f& v1, const Vec3f& v2) {
 		return acos(a); // 0..PI
 }*/
 
-void layoutConstrains::get_pairwise_relation(const singleObj& obj1, const singleObj& obj2, int&pfg, float&m, float&M) {
+void layoutConstrains::get_pairwise_relation(const singleObj& obj1, const singleObj& obj2, int&pfg, float&m, float&M, int & wallRelId) {
 	//std::map<int, std::pair<int, float>> pairMap;
 	pfg = 0;
 	int indexType = std::min(obj1.catalogId ,obj2.catalogId);
@@ -41,6 +41,9 @@ void layoutConstrains::get_pairwise_relation(const singleObj& obj1, const single
 					m = get<1>(it->second[i])[0];
 					M = get<1>(it->second[i])[1];
 					return;
+				}
+				else if (get<0>(it->second[i]) == TYPE_WALL) {
+					wallRelId = (indexType==obj1.catalogId)? obj1.id:obj2.id;
 				}
 			}
 		}
@@ -65,9 +68,10 @@ void layoutConstrains::cal_clearance_violation(float& mcv) {
 			mcv += room->cal_overlapping_area(room->objects[i].boundingBox, room->objects[j].boundingBox);
 		}
 	}*/
-	float overlappingFurArea= (cv::sum(room->furnitureMask)[0] - room->obstacleArea);
+	float overlappingFurArea= cv::sum(room->furnitureMask)[0] - room->obstacleArea;
 	mcv = room->indepenFurArea - overlappingFurArea;
-	cout << mcv << endl;
+	if (mcv < 0)
+		mcv = 0;
 }
 void Dilation(const Mat& src, Mat& dilation_dst, int dilation_size, int dilation_type = 0) {
 	/*if( erosion_elem == 0 ){ erosion_type = MORPH_RECT; }
@@ -86,7 +90,7 @@ void Dilation(const Mat& src, Mat& dilation_dst, int dilation_size, int dilation
 //represent a person with radius = 18
 void layoutConstrains::cal_circulation_term(float& mci) {
 	Mat dilation_dst;
-	Dilation(room->furnitureMask, dilation_dst, PersonArea);
+	Dilation(room->furnitureMask, dilation_dst, PersonSize);
 	mci = sum(dilation_dst)[0];
 }
 
@@ -97,9 +101,13 @@ void layoutConstrains::cal_pairwise_relationship(float& mpd, float& mpa) {
 	mpd = 0, mpa = 0;
 	int pfg;
 	float m, M;
+	int  wallRelId = -1;
 	for (int i = 0; i < room->objctNum; i++) {
-		for (int j = i + 1; j < room->objctNum; j++) {
-			get_pairwise_relation(room->objects[i], room->objects[j], pfg, m, M);
+		for (int j = i; j < room->objctNum; j++) {
+			get_pairwise_relation(room->objects[i], room->objects[j], pfg, m, M, wallRelId);
+			if (wallRelId!=-1) {
+				mpd += room->get_nearest_wall_dist(&room->objects[wallRelId]);
+			}
 			if (pfg) {
 				mpd -= t(dist_between_Vectors(room->objects[i].translation, room->objects[j].translation), m, M);
 				Vec3f f(-sin(room->objects[i].zrotation), cos(room->objects[i].zrotation), 0.0);
@@ -149,12 +157,9 @@ void layoutConstrains::cal_conversation_term(float& mcd, float& mca) {
 void layoutConstrains::cal_balance_term(float &mvb) {
 	float sumArea = .0f, oneArea;
 	Vec3f centroid(.0f, .0f, .0f);
-	for (int i = 0; i < room->objctNum; i++) {
-		oneArea = room->objects[i].boundingBox.area();
-		centroid += oneArea * room->objects[i].translation;
-		sumArea += oneArea;
-	}
-	centroid /= sumArea;
+	for (int i = 0; i < room->objctNum; i++)
+		centroid += room->objects[i].area * room->objects[i].translation;
+	centroid /= room->indepenFurArea;
 	mvb = dist_between_Vectors(centroid, room->center);
 }
 
@@ -175,7 +180,9 @@ void layoutConstrains::cal_alignment_term(float& mfa, float&mwa) {
 				singleObj * tmp = &room->objects[*ity];
 				mfa -= cos(4 * (tobj->zrotation - tmp->zrotation));
 			}
-			mwa -= cos(4 * (tobj->zrotation - room->walls[tobj->nearestWall].zrotation - PI/2));
+			float wallDist = room->get_nearest_wall_dist(tobj);
+			if(wallDist > 0)
+				mwa -= cos(4 * (tobj->zrotation - room->walls[tobj->nearestWall].zrotation - PI/2));
 		}	
 	}
 }
@@ -221,7 +228,6 @@ void layoutConstrains::get_all_reflection(map<int, Vec3f> focalPoint_map, vector
 //compute focal center
 void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 	vector<int>itemIdx;
-
 	mef = 0; msy = 0;
 	float phi_gps;
 	vector<Vec3f> reflectTranslate;
@@ -235,9 +241,6 @@ void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 		Vec3f focalPoint = room->focalPoint_map[it->first];
 
 		for (vector<int>::iterator itx = itemIdx.begin(); itx != itemIdx.end(); ++itx) {
-			//if (*itx >= 1000)
-			//	continue;
-			//singleObj * tobj = &room->objects[*itx];
 			singleObj * tobj = &room->objects[*itx];
 
 			Vec3f pd = focalPoint - tobj->translation;
@@ -247,10 +250,7 @@ void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 			mef -= pd.dot(n1);
 
 			for (vector<int>::iterator ity = itx + 1; ity != itemIdx.end(); ++ity) {
-				//if (*ity >= 1000)
-				//	continue;
-				int idy = (*ity >= 1000) ? *ity - 1000 : *ity;
-				float tmps = cos(tobj->zrotation - reflectZrot[idy]) - gamma*dist_between_Vectors(focalPoint, reflectTranslate[idy]);
+				float tmps = cos(tobj->zrotation - reflectZrot[*ity]) - gamma*dist_between_Vectors(focalPoint, reflectTranslate[*ity]);
 				maxS = (tmps > maxS)? tmps:maxS;
 			}
 			msy -= maxS;
@@ -260,16 +260,42 @@ void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 
 vector<float> layoutConstrains::get_all_constrain_terms() {
 	float mcv =0, mci=0, mpd=0, mpa=0, mcd=0, mca=0, mvb=0, mfa=0, mwa=0, mef=0, msy=0;
+	// avoid overlapping of furnitures
 	cal_clearance_violation(mcv);
-	cal_circulation_term(mci);//single check works
+	mcv *= 10;
+	// gurantee enough space for human to move
+	cal_circulation_term(mci);
+	mci /= 10000;
 	cal_pairwise_relationship(mpd, mpa);
+	//mpd /= 10;
+	mpa = abs(mpa)*10;
 	cal_conversation_term(mcd, mca);
+	mcd *= 1000;
+	mca = abs(mca)/100;
+	
 	cal_balance_term(mvb);
 	if(room->wallNum!=0)
 		cal_alignment_term(mfa, mwa);
+	
+	mfa *= 3;
+	mwa *= 3;
+	mfa = abs(mfa);
+	mwa = abs(mwa);
+
+	// mef encourage furnitures to face point
+	// msy measure the symmetry term
 	if(!room->focalPoint_map.empty())
 		cal_emphasis_term(mef, msy);
+	
+	mef = abs(mef) * 10;
+	msy /= 20;
+
 	float parameters[] = { mcv, mci, mpd, mpa, mcd, mca, mvb, mfa, mwa, mef, msy };
+	string content = "";
+	string split = "----";
+	for (int i = 0; i < 11; i++)
+		content += to_string(parameters[i])+ split;
+	cout << content << endl;
 	constrain_terms.assign(parameters, parameters + 11);
 	return constrain_terms;
 }

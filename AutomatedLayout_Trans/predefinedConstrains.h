@@ -4,15 +4,10 @@
 #define PI 3.14159
 #define ANGLE_TO_RAD_F 0.0174533 //0.01745329251994329576923690768489
 
-#define PersonArea 2
-#define BEDSIDE_DIST 36
-#define SEAT_DIST 30
-#define CABINET_DIST 24
-#define DINING_DIST 36
-
-#define COFFEETABLE_TO_SEAT 17
-#define ENDTABLE_TO_SEAT_MAX 12
-#define NIGHTSTAND_TO_BED_MAX 12
+#define PersonSize 40//40cm x 40 cm
+#define BEDSIDE_DIST 91//currently not considered
+#define CABINET_DIST 61
+#define DINING_DIST 91
 
 #define CONVERSATION_M_MIN 4
 #define CONVERSATION_M_MAX 8
@@ -21,7 +16,9 @@
 #define TYPE_COFFETABLE 1
 #define TYPE_SOFA 2
 #define TYPE_ENDTABLE 3
-#define TYPE_NIGHTSTAND 4
-#define TYPE_BED 5
+#define TYPE_BED 4
+#define TYPE_NIGHTSTAND 5
+#define TYPE_SHELF 6
+#define TYPE_WALL 100
 
 #endif // !__PREDEFINE__

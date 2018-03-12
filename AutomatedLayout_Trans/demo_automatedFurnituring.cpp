@@ -123,7 +123,6 @@ else
 filename = argv[1];*/
 int main(){
 	char* filename;
-
 	filename = new char[100];
 	int r = strcpy_s(filename, 100, "E:/layoutParam.txt");
 	Room* room = new Room();

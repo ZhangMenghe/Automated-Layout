@@ -41,21 +41,7 @@ class Room {
 private :
 	Mat_<uchar> furnitureMask_initial;
 
-	int find_nearest_wall(float x, float y) {
-		float min_dist = INFINITY, dist;
-		int min_id = -1;
-		for (int i = 0; i < wallNum; i++) {
-			dist = abs(walls[i].a * x + walls[i].b * y + walls[i].c) / sqrt(walls[i].a * walls[i].a + walls[i].b * walls[i].b);
-			if (dist < min_dist) {
-				min_dist = dist;
-				min_id = i;
-			}
-		}
-		return min_id;
-	}
-	void initialize_default_pairwise_map() {
 
-	}
 	vector<float> get_vertices_by_pos(float cx, float cy, float half_width, float half_height) {
 		float res[8] =  { -half_width + cx, half_height + cy, half_width + cx, half_height + cy, half_width + cx, -half_height + cy, -half_width + cx, -half_height + cy };
 		return vector<float> (res, res + 8);
@@ -98,7 +84,7 @@ private :
 		indepenFurArea += obj.area;
 		update_obj_boundingBox_and_vertices(obj);
 
-		obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
+		//obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
 
 		objGroupMap[0].push_back(obj.id);
 
@@ -170,14 +156,13 @@ public:
 		center = Vec3f(.0f, .0f, .0f);
 		objctNum = 0;
 		wallNum = 0;
-		initialize_default_pairwise_map();
 		half_width = s_width/2;
 		half_height = s_height/2;
 		indepenFurArea = 0;
 		obstacleArea = 0;
 		set_pairwise_map();
 		furnitureMask_initial = Mat::zeros(int(s_width +1), int(s_height +1), CV_8UC1);
-		furnitureMask = furnitureMask_initial;
+		furnitureMask = furnitureMask_initial.clone();
 	}
 	Point card_to_graph_point(float x, float y) {
 		return Point(int(half_width + x), int(half_height - y));
@@ -207,7 +192,6 @@ public:
 		pos[0] = xnew + center[0];
 		pos[1] = ynew + center[1];
 	}
-
 	void set_obj_zrotation(float new_rotation, int id) {
 		objects[id].zrotation = fmod(new_rotation, PI);
 		update_obj_boundingBox_and_vertices(objects[id]);
@@ -215,19 +199,24 @@ public:
 
 	bool set_obj_translation(float tx, float ty, int id) {
 		Mat_<uchar> tmpCanvas = furnitureMask;
+		singleObj * obj = &objects[id];
+
 		float movex = tx - objects[id].translation[0];
 		float movey = ty - objects[id].translation[1];
+		if (obj->boundingBox.x + movex <= -half_width || obj->boundingBox.x + obj->boundingBox.width + movex >= half_width
+			|| obj->boundingBox.y + movey >= half_height || obj->boundingBox.y - obj->boundingBox.height + movey <= -half_height) {
+			return false;
+		}
+		update_mask_by_object(obj, tmpCanvas, movex, movey);
 
-		update_mask_by_object(&objects[id], tmpCanvas, movex, movey);
-
-		if (cv::sum(furnitureMask)[0] + objects[id].area < cv::sum(tmpCanvas)[0])
+		if (cv::sum(furnitureMask)[0] + obj->area < cv::sum(tmpCanvas)[0])
 			return false;
 
-		objects[id].translation[0] = tx;
-		objects[id].translation[1] = ty;
+		obj->translation[0] = tx;
+		obj->translation[1] = ty;
 		for (int i = 0; i < 4; i++) {
-			objects[id].vertices[i][0] += movex;
-			objects[id].vertices[i][1] += movey;
+			obj->vertices[i][0] += movex;
+			obj->vertices[i][1] += movey;
 		}
 		return true;
 	}
@@ -239,14 +228,25 @@ public:
 
 	void set_pairwise_map() {
 		vector<pair<int, Vec2f>> chair;
-		chair.push_back(pair <int, Vec2f>(0, Vec2f(1, 5)));
-		chair.push_back(pair <int, Vec2f>(1, Vec2f(0, COFFEETABLE_TO_SEAT)));
-		chair.push_back(pair <int, Vec2f>(3, Vec2f(0, ENDTABLE_TO_SEAT_MAX)));
+		// seat to seat
+		chair.push_back(pair <int, Vec2f>(0, Vec2f(0, 50)));
+		//coffee table to seat
+		chair.push_back(pair <int, Vec2f>(1, Vec2f(40, 46)));
+		//seat to end table
+		chair.push_back(pair <int, Vec2f>(3, Vec2f(0, 30)));
 
-		vector<pair<int, Vec2f>> nightStand;
-		nightStand.push_back(pair <int, Vec2f>(5, Vec2f(1, NIGHTSTAND_TO_BED_MAX)));
+		vector<pair<int, Vec2f>> bed;
+		// bed TO nightstand
+		bed.push_back(pair <int, Vec2f>(5, Vec2f(0, 30)));
+		// bed to wall
+		bed.push_back(pair <int, Vec2f>(100, Vec2f(0, 0)));
+
+		vector<pair<int, Vec2f>> shelf;
+		shelf.push_back(pair<int, Vec2f>(100, Vec2f(0, 0)));
+
 		pairMap[TYPE_CHAIR] = chair;
-		pairMap[TYPE_NIGHTSTAND] = nightStand;
+		pairMap[TYPE_BED] = bed;
+		pairMap[TYPE_SHELF] = shelf;
 	}
 
 	vector<Vec3f> get_objs_transformation() {
@@ -262,7 +262,19 @@ public:
 			res.push_back(objects[i].zrotation);
 		return res;
 	}
-
+	float get_nearest_wall_dist(singleObj * obj) {
+		float x = obj->translation[0], y = obj->translation[1];
+		float min_dist = INFINITY, dist;
+		//int min_id = -1;
+		for (int i = 0; i < wallNum; i++) {
+			dist = abs(walls[i].a * x + walls[i].b * y + walls[i].c) / sqrt(walls[i].a * walls[i].a + walls[i].b * walls[i].b);
+			if (dist < min_dist) {
+				min_dist = dist;
+				obj->nearestWall = i;
+			}
+		}
+		return min_dist;
+	}
 	void add_a_focal_point(Vec3f focalpoint, int groupId = 0) {
 		focalPoint_map[groupId] = focalpoint;
 	}
@@ -345,7 +357,7 @@ public:
 	}
 
 	void update_furniture_mask() {
-		furnitureMask = furnitureMask_initial;	
+		furnitureMask = furnitureMask_initial.clone();
 		vector<vector<Point>> contours;
 		for (int i = 0; i < objctNum; i++) {
 			singleObj * obj = &objects[i];
