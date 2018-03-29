@@ -165,6 +165,7 @@ void automatedLayout::display_suggestions() {
 
 	ofstream outfile;
 	outfile.open("E:/recommendation.txt", 'w');
+	outfile << "RoomSize: "<<to_string(int(room->half_width*2))<<" "<<to_string(int(room->half_height*2))<<"\r\n";
 	if (outfile.is_open()) {
 		outfile << "WALL_Id\t|\tzheight\t|\tvertices\r\n";
 		for (int i = 0; i < room->wallNum; i++) {

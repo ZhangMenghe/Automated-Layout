@@ -41,11 +41,6 @@ class Room {
 private :
 	Mat_<uchar> furnitureMask_initial;
 
-
-	vector<float> get_vertices_by_pos(float cx, float cy, float half_width, float half_height) {
-		float res[8] =  { -half_width + cx, half_height + cy, half_width + cx, half_height + cy, half_width + cx, -half_height + cy, -half_width + cx, -half_height + cy };
-		return vector<float> (res, res + 8);
-	}
 	void initialize_vertices_wall(wall & nw) {
 		float half_length = nw.width / 2;
 		if (nw.a == 0) {
@@ -64,7 +59,24 @@ private :
 		}
 
 	}
-
+	void setup_wall_equation(Vec3f m_position, float rot, float & a, float & b, float & c) {
+		a = b = c = .0f;
+		//x+c=0
+		if (remainder(rot, 180) == 0) {
+			a = 1;
+			c = -m_position[0];
+		}
+		else if (remainder(rot, 90) == 0) {
+			b = 1;
+			c = -m_position[1];
+		}
+		else {
+			rot = remainder(rot, 180);
+			a = tanf((90 + rot)*ANGLE_TO_RAD_F);
+			b = -1;
+			c = m_position[1] - a * m_position[0];
+		}
+	}
 	// 4*2 vertices, 2 center, 2 size, angle, label, zheight
 	void initial_object_by_parameters(vector<float>params, bool isFixed = false) {
 		singleObj obj;
@@ -98,25 +110,6 @@ private :
 			update_mask_by_object(&obj, furnitureMask_initial);//is a fixed object
 		float test = cv::sum(furnitureMask)[0];
 	}
-	void setup_wall_equation(Vec3f m_position, float rot, float & a, float & b, float & c) {
-		a = b = c = .0f;
-		//x+c=0
-		if (remainder(rot, 180) == 0) {
-			a = 1;
-			c = -m_position[0];
-		}
-		else if (remainder(rot, 90) == 0) {
-			b = 1;
-			c = -m_position[1];
-		}
-		else {
-			rot = remainder(rot, 180);
-			a = tanf((90 + rot)*ANGLE_TO_RAD_F);
-			b = -1;
-			c = m_position[1] - a * m_position[0];
-		}
-	}
-	
 	void update_mask_by_object(const singleObj* obj, Mat_<uchar> & target, float movex = -1, float movey=-1) {
 		vector<Point> contour;
 		vector<vector<Point>> contours;
@@ -166,18 +159,6 @@ public:
 	}
 	Point card_to_graph_point(float x, float y) {
 		return Point(int(half_width + x), int(half_height - y));
-	}
-
-	float cal_overlapping_area(const Rect r1, const Rect r2) {
-		if (r1.x > r2.x + r2.width || r1.x + r1.width < r2.x)
-			return 0;
-		if (r1.y > r2.y + r2.height || r1.y + r1.height < r2.y)
-			return 0;
-		float dx = std::min(r1.x + r1.width, r2.x + r2.width) - std::max(r1.x, r2.x);
-		float dy = std::min(r1.y, r2.y) - std::max(r1.y - r1.height, r2.y - r2.height);
-		if ((dx >= 0) && (dy >= 0))
-			return dx*dy;
-		return 0;
 	}
 	void rot_around_point(const Vec3f& center, Vec2f& pos, float s, float c) {
 		// translate point back to origin:
@@ -275,29 +256,35 @@ public:
 		}
 		return min_dist;
 	}
-	void add_a_focal_point(Vec3f focalpoint, int groupId = 0) {
-		focalPoint_map[groupId] = focalpoint;
+	void add_a_focal_point(vector<float> fp) {
+		if(fp.size()>3)
+			focalPoint_map[fp[3]] = Vec3f(fp[0], fp[1], fp[2]);
+		else
+			focalPoint_map[0] = Vec3f(fp[0], fp[1], fp[2]);
 	}
-	void add_a_wall(Vec3f m_position, float rot, float w_width, float w_height) {
+	// params: Vec3f m_position, float rot, float w_width, float w_height) {
+	void add_a_wall(vector<float> params){
 		wall newWall;
 		newWall.id = walls.size();
-		newWall.position = m_position;
-		newWall.zrotation = rot * ANGLE_TO_RAD_F;
-		newWall.width = w_width;
-		newWall.zheight = w_height;
-		setup_wall_equation(m_position, rot, newWall.a, newWall.b, newWall.c);
+		newWall.position = Vec3f(params[0], params[1], params[2]);
+		newWall.zrotation = params[3] * ANGLE_TO_RAD_F;
+		newWall.width = params[4];
+		newWall.zheight = params[5];
+		setup_wall_equation(newWall.position, params[3], newWall.a, newWall.b, newWall.c);
 		initialize_vertices_wall(newWall);
 		walls.push_back(newWall);
 		wallNum++;
-
 	}
-
-	void add_an_object(vector<float> params, int groupId = 0, bool isFixed = false) {
+	void add_an_object(vector<float> params, bool isFixed = false) {
 		if (params.size() < 15) {
-			vector<float> vertices = get_vertices_by_pos(params[0], params[1], params[2]/2, params[3]/2);
+			float hw = params[2] / 2, hh = params[3] / 2;
+			float cx = params[0], cy = params[1];
+			float res[8] = { -hw + cx, hh + cy, hw + cx, hh + cy, hw + cx, -hh + cy, -hw + cx, -hh + cy };
+			vector<float>vertices(res, res + 8);// get_vertices_by_pos(params[0], params[1], params[2] / 2, params[3] / 2);
 			params.insert(params.begin(), vertices.begin(), vertices.end());
 		}
-		params.push_back(groupId);
+		if(params.size()<16)
+			params.push_back(0);
 		initial_object_by_parameters(params, isFixed);
 	}
 
