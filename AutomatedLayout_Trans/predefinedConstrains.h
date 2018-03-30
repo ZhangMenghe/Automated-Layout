@@ -19,6 +19,9 @@
 #define TYPE_BED 4
 #define TYPE_NIGHTSTAND 5
 #define TYPE_SHELF 6
+#define TYPE_TABLE 7
+#define TYPE_DESK 8
+#define TYPE_OTHER 9
 #define TYPE_WALL 100
 
 #endif // !__PREDEFINE__

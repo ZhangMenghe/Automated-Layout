@@ -15,6 +15,8 @@ struct singleObj
 {
 	int id;
 	bool isFixed;
+	bool alignedTheWall;
+	bool adjoinWall;
 	Rect2f boundingBox;
 	vector<Vec2f> vertices;
 	Vec3f translation;
@@ -93,8 +95,11 @@ private :
 		obj.catalogId = params[13];
 		obj.zheight = params[14];
 		obj.area = obj.objWidth * obj.objHeight;
+		obj.isFixed = isFixed;
+		obj.alignedTheWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_DESK) ? true : false;
+		obj.adjoinWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_DESK) ? true : false;
 		indepenFurArea += obj.area;
-		update_obj_boundingBox_and_vertices(obj);
+		update_obj_boundingBox_and_vertices(obj,0);
 
 		//obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
 
@@ -145,16 +150,18 @@ public:
 	float obstacleArea;
 	vector<int> freeObjIds;
 	vector<vector<float>> obstacles;
-	Room(float s_width=800.0f, float s_height=600.0f) {
+	Room() {
 		center = Vec3f(.0f, .0f, .0f);
 		objctNum = 0;
 		wallNum = 0;
-		half_width = s_width/2;
-		half_height = s_height/2;
 		indepenFurArea = 0;
 		obstacleArea = 0;
+	}
+	void initialize_room(float s_width = 800.0f, float s_height = 600.0f) {
+		half_width = s_width / 2;
+		half_height = s_height / 2;
 		set_pairwise_map();
-		furnitureMask_initial = Mat::zeros(int(s_width +1), int(s_height +1), CV_8UC1);
+		furnitureMask_initial = Mat::zeros(int(s_width + 1), int(s_height + 1), CV_8UC1);
 		furnitureMask = furnitureMask_initial.clone();
 	}
 	Point card_to_graph_point(float x, float y) {
@@ -174,8 +181,11 @@ public:
 		pos[1] = ynew + center[1];
 	}
 	void set_obj_zrotation(float new_rotation, int id) {
+		if (objects[id].zrotation == fmod(new_rotation, PI))
+			return;
+		float old = objects[id].zrotation;
 		objects[id].zrotation = fmod(new_rotation, PI);
-		update_obj_boundingBox_and_vertices(objects[id]);
+		update_obj_boundingBox_and_vertices(objects[id], old);
 	}
 
 	bool set_obj_translation(float tx, float ty, int id) {
@@ -184,10 +194,12 @@ public:
 
 		float movex = tx - objects[id].translation[0];
 		float movey = ty - objects[id].translation[1];
-		if (obj->boundingBox.x + movex <= -half_width || obj->boundingBox.x + obj->boundingBox.width + movex >= half_width
-			|| obj->boundingBox.y + movey >= half_height || obj->boundingBox.y - obj->boundingBox.height + movey <= -half_height) {
+		bool c1 = obj->boundingBox.x + movex <= -half_width;
+		bool c2 = obj->boundingBox.x + obj->boundingBox.width + movex >= half_width;
+		bool c3 = obj->boundingBox.y + movey >= half_height;
+		bool c4 = obj->boundingBox.y - obj->boundingBox.height + movey <= -half_height;
+		if (c1 || c2||c3 || c4)
 			return false;
-		}
 		update_mask_by_object(obj, tmpCanvas, movex, movey);
 
 		if (cv::sum(furnitureMask)[0] + obj->area < cv::sum(tmpCanvas)[0])
@@ -199,6 +211,8 @@ public:
 			obj->vertices[i][0] += movex;
 			obj->vertices[i][1] += movey;
 		}
+		obj->boundingBox.x += movex;
+		obj->boundingBox.y += movey;
 		return true;
 	}
 
@@ -266,11 +280,11 @@ public:
 	void add_a_wall(vector<float> params){
 		wall newWall;
 		newWall.id = walls.size();
-		newWall.position = Vec3f(params[0], params[1], params[2]);
-		newWall.zrotation = params[3] * ANGLE_TO_RAD_F;
-		newWall.width = params[4];
-		newWall.zheight = params[5];
-		setup_wall_equation(newWall.position, params[3], newWall.a, newWall.b, newWall.c);
+		newWall.position = Vec3f(params[0], params[1], .0f);
+		newWall.zrotation = params[2];
+		newWall.width = params[3];
+		newWall.zheight = params[4];
+		setup_wall_equation(newWall.position, newWall.zrotation, newWall.a, newWall.b, newWall.c);
 		initialize_vertices_wall(newWall);
 		walls.push_back(newWall);
 		wallNum++;
@@ -301,9 +315,9 @@ public:
 		obstacles.push_back(vertices);
 	}
 			
-	void update_obj_boundingBox_and_vertices(singleObj& obj) {
-		float s = sin(obj.zrotation);
-		float c = cos(obj.zrotation);
+	void update_obj_boundingBox_and_vertices(singleObj& obj, float oldRot) {
+		float s = sin(obj.zrotation - oldRot);
+		float c = cos(obj.zrotation- oldRot);
 		for (int i = 0; i < 4; i++)
 			rot_around_point(obj.translation, obj.vertices[i],s,c);
 		vector<float> xbox = { obj.vertices[0][0], obj.vertices[1][0], obj.vertices[2][0], obj.vertices[3][0]};

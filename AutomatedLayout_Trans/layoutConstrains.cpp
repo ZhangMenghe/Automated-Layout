@@ -251,6 +251,8 @@ void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 			msy -= maxS;
 		}
 	}
+	if (msy == INFINITY)
+		msy = 0;
 }
 
 vector<float> layoutConstrains::get_all_constrain_terms() {
