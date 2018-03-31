@@ -43,21 +43,21 @@ class Room {
 private :
 	Mat_<uchar> furnitureMask_initial;
 
-	void initialize_vertices_wall(wall & nw) {
-		float half_length = nw.width / 2;
-		if (nw.a == 0) {
-			nw.vertices.push_back(Vec2f(nw.position[0] - half_length, nw.position[1]));
-			nw.vertices.push_back(Vec2f(nw.position[0] + half_length, nw.position[1]));
+	void initialize_vertices_wall(wall*nw) {
+		float half_length = nw->width / 2;
+		if (nw->a == 0) {
+			nw->vertices.push_back(Vec2f(nw->position[0] - half_length, nw->position[1]));
+			nw->vertices.push_back(Vec2f(nw->position[0] + half_length, nw->position[1]));
 		}
-		else if (nw.b == 0) {
-			nw.vertices.push_back(Vec2f(nw.position[0], nw.position[1] - half_length));
-			nw.vertices.push_back(Vec2f(nw.position[0], nw.position[1] + half_length));
+		else if (nw->b == 0) {
+			nw->vertices.push_back(Vec2f(nw->position[0], nw->position[1] - half_length));
+			nw->vertices.push_back(Vec2f(nw->position[0], nw->position[1] + half_length));
 		}
 		else {
-			float half_len_proj_x = cosf((90 + nw.zrotation)*ANGLE_TO_RAD_F) *half_length;
-			float half_len_proj_y = sinf((90 + nw.zrotation)*ANGLE_TO_RAD_F) *half_length;
-			nw.vertices.push_back(Vec2f(nw.position[0] + half_len_proj_x, nw.position[1] + half_len_proj_y));
-			nw.vertices.push_back(Vec2f(nw.position[0] - half_len_proj_x, nw.position[1] - half_len_proj_y));
+			float half_len_proj_x = cosf((90 + nw->zrotation)*ANGLE_TO_RAD_F) *half_length;
+			float half_len_proj_y = sinf((90 + nw->zrotation)*ANGLE_TO_RAD_F) *half_length;
+			nw->vertices.push_back(Vec2f(nw->position[0] + half_len_proj_x, nw->position[1] + half_len_proj_y));
+			nw->vertices.push_back(Vec2f(nw->position[0] - half_len_proj_x, nw->position[1] - half_len_proj_y));
 		}
 
 	}
@@ -78,6 +78,31 @@ private :
 			b = -1;
 			c = m_position[1] - a * m_position[0];
 		}
+	}
+	void init_wall_by_coords(wall *newWall, vector<float> params) {
+		float ax = params[0], ay = params[1], bx = params[2], by = params[3];
+		newWall->position = Vec3f((ax + bx) / 2, (ay + by) / 2, 0);
+		newWall->width = sqrtf(powf((by - ay), 2) + powf((bx - ax), 2));
+		newWall->vertices.push_back(Vec2f(ax, ay)); newWall->vertices.push_back(Vec2f(bx, by));
+		if (ax == bx) {
+			newWall->zrotation = 0;
+			newWall->b = 0; newWall->a = 1; newWall->c = -ax;
+		}
+		else if (ay == by) {
+			newWall->zrotation = 90;
+			newWall->a = 0; newWall->b = 1; newWall->c = -ay;
+		}
+		else {
+			newWall->a = (by - ay) / (bx - ax); newWall->b = -1; newWall->c = -(newWall->a*ax - ay);
+			newWall->zrotation = atanf(newWall->a)/PI *180;
+		}
+	}
+	void init_wall_by_length(wall *newWall, vector<float> params) {
+		newWall->position = Vec3f(params[0], params[1], .0f);
+		newWall->zrotation = params[2];
+		newWall->width = params[3];
+		setup_wall_equation(newWall->position, newWall->zrotation, newWall->a, newWall->b, newWall->c);
+		initialize_vertices_wall(newWall);
 	}
 	// 4*2 vertices, 2 center, 2 size, angle, label, zheight
 	void initial_object_by_parameters(vector<float>params, bool isFixed = false) {
@@ -114,6 +139,18 @@ private :
 		else
 			update_mask_by_object(&obj, furnitureMask_initial);//is a fixed object
 		float test = cv::sum(furnitureMask)[0];
+	}
+	void update_mask_by_wall(const wall* wal) {
+		vector<Point> contour;
+		vector<vector<Point>> contours;
+		float ax = wal->vertices[0][0], ay = wal->vertices[0][1], bx = wal->vertices[1][0], by = wal->vertices[1][1];
+		contour.push_back(card_to_graph_point(ax, ay));
+		contour.push_back(card_to_graph_point(bx, by));
+		float tx = (fabs(ax) > fabs(bx)) ? ax : bx;
+		float ty = (tx == ax) ? by:ay;
+		contour.push_back(card_to_graph_point(tx, ty));
+		contours.push_back(contour);
+		drawContours(furnitureMask_initial, contours, 0, 0, FILLED, 8);
 	}
 	void update_mask_by_object(const singleObj* obj, Mat_<uchar> & target, float movex = -1, float movey=-1) {
 		vector<Point> contour;
@@ -276,18 +313,20 @@ public:
 		else
 			focalPoint_map[0] = Vec3f(fp[0], fp[1], fp[2]);
 	}
+
 	// params: Vec3f m_position, float rot, float w_width, float w_height) {
 	void add_a_wall(vector<float> params){
 		wall newWall;
-		newWall.id = walls.size();
-		newWall.position = Vec3f(params[0], params[1], .0f);
-		newWall.zrotation = params[2];
-		newWall.width = params[3];
+		newWall.id = walls.size();		
 		newWall.zheight = params[4];
-		setup_wall_equation(newWall.position, newWall.zrotation, newWall.a, newWall.b, newWall.c);
-		initialize_vertices_wall(newWall);
+		if (params.size() == 5)
+			init_wall_by_length(&newWall, params);
+		else
+			init_wall_by_coords(&newWall, params);
 		walls.push_back(newWall);
 		wallNum++;
+		if (fabs(fmod(newWall.zrotation, 90)) > 0.01)
+			update_mask_by_wall(&newWall);
 	}
 	void add_an_object(vector<float> params, bool isFixed = false) {
 		if (params.size() < 15) {

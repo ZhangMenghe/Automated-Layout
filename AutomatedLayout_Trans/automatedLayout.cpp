@@ -25,15 +25,15 @@ float automatedLayout::density_function(float cost) {
 void automatedLayout::random_along_wall(int furnitureID) {
 	singleObj *selectedObj = &room->objects[furnitureID];
 	wall* selecWall = &room->walls[rand() % room->wallNum];
-	//wall* selecWall = &room->walls[0];
+	//wall* selecWall = &room->walls[3];
 	srand(time(NULL));
 	int rotOrNot = rand() % 2;
-	float rotRand = rotOrNot * 90 ;
-	room->set_obj_zrotation((selecWall->zrotation + rotRand)* ANGLE_TO_RAD_F, furnitureID);
+	float rotRand = (selecWall->zrotation<0)? 90- selecWall->zrotation + rotOrNot * 90 : selecWall->zrotation + rotOrNot * 90;
+	room->set_obj_zrotation(rotRand* ANGLE_TO_RAD_F, furnitureID);
 
 	Vec2f p1 = selecWall->vertices[0], p2 = selecWall->vertices[1];
 	float w_ran = p2[0] - p1[0] - selectedObj->boundingBox.width, h_ran = p2[1] - p1[1] - selectedObj->boundingBox.height;
-	float rh = p1[1] + rand() % int(h_ran), rw = p1[0]+rand()%int(w_ran);
+	float rh , rw;
 
 	int mp;
 	if (selecWall->position[0] > 0 || selecWall->position[1] > 0)
@@ -42,20 +42,33 @@ void automatedLayout::random_along_wall(int furnitureID) {
 		mp = 1;
 	
 	if (fabs(p2[0]-p1[0]) < 0.001) {
-		rh += selectedObj->boundingBox.height / 2;
+		rh = p1[1] + rand() % int(h_ran)+ selectedObj->boundingBox.height / 2;
 		if (!room->set_obj_translation(selecWall->position[0] + mp * (selectedObj->boundingBox.width / 2 + 0.01), rh, furnitureID))
 			cout << "fail" << endl;
 	}
 		
 	else if (fabs(p2[1]-p1[1]) < 0.001) {
-		rw += selectedObj->boundingBox.width / 2;
+		rw = p1[0] + rand() % int(w_ran)+ selectedObj->boundingBox.width / 2;
 		if(!room->set_obj_translation(rw, selecWall->position[1] + mp * (selectedObj->boundingBox.height / 2+0.01), furnitureID))
 			cout << "fail" << endl;
 	}
 		
 	else {
-	
-		room->set_obj_translation(rw, rh, furnitureID);
+		float length = (rotOrNot) ? selectedObj->objHeight : selectedObj->objWidth;
+		rw = p1[0] + rand() % int(w_ran) + length / 2;
+		// calculate corresponding position on wall(x->y)
+		float a = selecWall->a, b = selecWall->b, c = selecWall->c;
+		float y = (-c - a * rw) / b;
+		float tk = b / a, tb = y - tk * rw;
+		
+		float axbyc= length / 2 * sqrtf(a*a + b * b);
+		float tx = (axbyc - c - b * tb) / (a+b*tk);
+		float ty = tk * tx + tb;
+		if (ty > room->half_height || ty < -room->half_height) {
+			tx = -tx;
+			ty = tk * tx + tb;
+		}
+		room->set_obj_translation(tx, ty, furnitureID);
 	}
 		
 	//todo!!!!
@@ -161,6 +174,8 @@ void automatedLayout::Metropolis_Hastings() {
 	vector<float> perturb_ori_rot;
 	vector<int> perturb_id;
 
+	if (room->freeObjIds.size() == 0)
+		return;
 	cost = cost_function();
 	p0 = density_function(cost);
 	
@@ -178,10 +193,9 @@ void automatedLayout::Metropolis_Hastings() {
 		for (int i = 0; i < perturb_id.size(); i++) {
 			room->set_obj_zrotation(perturb_ori_rot[i], perturb_id[i]);
 			room->set_obj_translation(perturb_ori_trans[i][0], perturb_ori_trans[i][1], perturb_id[i]);
-			
 		}
 	}
-	if (cost <= min_cost) {
+	if (cost < min_cost) {
 		res_rotation.push(room->get_objs_rotation());
 		res_transform.push(room->get_objs_transformation());
 		if (res_rotation.size() > resNum) {

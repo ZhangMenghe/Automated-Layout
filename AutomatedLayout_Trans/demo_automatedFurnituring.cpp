@@ -37,7 +37,14 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 	vector<vector<float>> mergedObjParams;
 	int groupid;
 	vector<int> groupedIds;
-	for (int i = 0; i < itemNum; i++) {
+	int startId = 0;
+	if (cateType[0] == 'r') {
+		room->initialize_room(parameters[0][0], parameters[0][1]);
+		startId = 1;
+	}
+	else
+		room->initialize_room();
+	for (int i = startId; i < itemNum; i++) {
 		switch (cateType[i])
 		{
 		case '#':
