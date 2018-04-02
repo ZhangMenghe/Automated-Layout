@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include "automatedLayout.h"
 #include "room.h"
 #include "processFixedObjects.h"
@@ -36,22 +37,27 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 	vector<vector<float>> mergedObjParams;
 	int groupid;
 	vector<int> groupedIds;
-	for (int i = 0; i < itemNum; i++) {
+	int startId = 0;
+	if (cateType[0] == 'r') {
+		room->initialize_room(parameters[0][0], parameters[0][1]);
+		startId = 1;
+	}
+	else
+		room->initialize_room();
+	for (int i = startId; i < itemNum; i++) {
 		switch (cateType[i])
 		{
 		case '#':
 			break;
 		//add a new wall
 		case 'w':
-			room->add_a_wall(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), parameters[i][3], parameters[i][4], parameters[i][5]);
+			room->add_a_wall(parameters[i]);
 			break;
 		case 'f':
-			//groupid = parameters[i].size() == 8 ? 0 : parameters[i][8];
-			room->add_an_object(parameters[i], 0);
+			room->add_an_object(parameters[i]);
 			break;
 		case 'p':
-			groupid = parameters[i].size() == 3 ? 0 : parameters[i][3];
-			room->add_a_focal_point(Vec3f(parameters[i][0], parameters[i][1], parameters[i][2]), groupid);
+			room->add_a_focal_point(parameters[i]);
 			break;
 		case 'o':
 			fixedObjParams.push_back(parameters[i]);
@@ -62,8 +68,7 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 				groupedIds.push_back(parameters[i][k]);
 			break;
 		case 'v':
-			for (int n = 0; n < parameters[i].size(); n++)
-				weights.push_back(parameters[i][n]);
+			weights = parameters[i];
 			break;
 		default:
 			break;

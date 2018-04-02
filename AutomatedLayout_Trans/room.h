@@ -15,6 +15,8 @@ struct singleObj
 {
 	int id;
 	bool isFixed;
+	bool alignedTheWall;
+	bool adjoinWall;
 	Rect2f boundingBox;
 	vector<Vec2f> vertices;
 	Vec3f translation;
@@ -41,62 +43,23 @@ class Room {
 private :
 	Mat_<uchar> furnitureMask_initial;
 
-
-	vector<float> get_vertices_by_pos(float cx, float cy, float half_width, float half_height) {
-		float res[8] =  { -half_width + cx, half_height + cy, half_width + cx, half_height + cy, half_width + cx, -half_height + cy, -half_width + cx, -half_height + cy };
-		return vector<float> (res, res + 8);
-	}
-	void initialize_vertices_wall(wall & nw) {
-		float half_length = nw.width / 2;
-		if (nw.a == 0) {
-			nw.vertices.push_back(Vec2f(nw.position[0] - half_length, nw.position[1]));
-			nw.vertices.push_back(Vec2f(nw.position[0] + half_length, nw.position[1]));
+	void initialize_vertices_wall(wall*nw) {
+		float half_length = nw->width / 2;
+		if (nw->a == 0) {
+			nw->vertices.push_back(Vec2f(nw->position[0] - half_length, nw->position[1]));
+			nw->vertices.push_back(Vec2f(nw->position[0] + half_length, nw->position[1]));
 		}
-		else if (nw.b == 0) {
-			nw.vertices.push_back(Vec2f(nw.position[0], nw.position[1] - half_length));
-			nw.vertices.push_back(Vec2f(nw.position[0], nw.position[1] + half_length));
+		else if (nw->b == 0) {
+			nw->vertices.push_back(Vec2f(nw->position[0], nw->position[1] - half_length));
+			nw->vertices.push_back(Vec2f(nw->position[0], nw->position[1] + half_length));
 		}
 		else {
-			float half_len_proj_x = cosf((90 + nw.zrotation)*ANGLE_TO_RAD_F) *half_length;
-			float half_len_proj_y = sinf((90 + nw.zrotation)*ANGLE_TO_RAD_F) *half_length;
-			nw.vertices.push_back(Vec2f(nw.position[0] + half_len_proj_x, nw.position[1] + half_len_proj_y));
-			nw.vertices.push_back(Vec2f(nw.position[0] - half_len_proj_x, nw.position[1] - half_len_proj_y));
+			float half_len_proj_x = cosf((90 + nw->zrotation)*ANGLE_TO_RAD_F) *half_length;
+			float half_len_proj_y = sinf((90 + nw->zrotation)*ANGLE_TO_RAD_F) *half_length;
+			nw->vertices.push_back(Vec2f(nw->position[0] + half_len_proj_x, nw->position[1] + half_len_proj_y));
+			nw->vertices.push_back(Vec2f(nw->position[0] - half_len_proj_x, nw->position[1] - half_len_proj_y));
 		}
 
-	}
-
-	// 4*2 vertices, 2 center, 2 size, angle, label, zheight
-	void initial_object_by_parameters(vector<float>params, bool isFixed = false) {
-		singleObj obj;
-		obj.id = objects.size();
-		//vertices
-		for (int i = 0; i < 4; i++)
-			obj.vertices.push_back(Vec2f(params[2 * i], params[2 * i + 1]));
-
-		obj.translation = Vec3f(params[8], params[9], .0f);
-		obj.objWidth = params[10];
-		obj.objHeight = params[11];
-
-		obj.zrotation = params[12] * ANGLE_TO_RAD_F;
-		obj.catalogId = params[13];
-		obj.zheight = params[14];
-		obj.area = obj.objWidth * obj.objHeight;
-		indepenFurArea += obj.area;
-		update_obj_boundingBox_and_vertices(obj);
-
-		//obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
-
-		objGroupMap[0].push_back(obj.id);
-
-		objects.push_back(obj);
-		objctNum++;
-		if (!isFixed) {
-			update_mask_by_object(&obj, furnitureMask);
-			freeObjIds.push_back(obj.id);
-		}
-		else
-			update_mask_by_object(&obj, furnitureMask_initial);//is a fixed object
-		float test = cv::sum(furnitureMask)[0];
 	}
 	void setup_wall_equation(Vec3f m_position, float rot, float & a, float & b, float & c) {
 		a = b = c = .0f;
@@ -116,7 +79,79 @@ private :
 			c = m_position[1] - a * m_position[0];
 		}
 	}
-	
+	void init_wall_by_coords(wall *newWall, vector<float> params) {
+		float ax = params[0], ay = params[1], bx = params[2], by = params[3];
+		newWall->position = Vec3f((ax + bx) / 2, (ay + by) / 2, 0);
+		newWall->width = sqrtf(powf((by - ay), 2) + powf((bx - ax), 2));
+		newWall->vertices.push_back(Vec2f(ax, ay)); newWall->vertices.push_back(Vec2f(bx, by));
+		if (ax == bx) {
+			newWall->zrotation = 0;
+			newWall->b = 0; newWall->a = 1; newWall->c = -ax;
+		}
+		else if (ay == by) {
+			newWall->zrotation = 90;
+			newWall->a = 0; newWall->b = 1; newWall->c = -ay;
+		}
+		else {
+			newWall->a = (by - ay) / (bx - ax); newWall->b = -1; newWall->c = -(newWall->a*ax - ay);
+			newWall->zrotation = atanf(newWall->a)/PI *180;
+		}
+	}
+	void init_wall_by_length(wall *newWall, vector<float> params) {
+		newWall->position = Vec3f(params[0], params[1], .0f);
+		newWall->zrotation = params[2];
+		newWall->width = params[3];
+		setup_wall_equation(newWall->position, newWall->zrotation, newWall->a, newWall->b, newWall->c);
+		initialize_vertices_wall(newWall);
+	}
+	// 4*2 vertices, 2 center, 2 size, angle, label, zheight
+	void initial_object_by_parameters(vector<float>params, bool isFixed = false) {
+		singleObj obj;
+		obj.id = objects.size();
+		//vertices
+		for (int i = 0; i < 4; i++)
+			obj.vertices.push_back(Vec2f(params[2 * i], params[2 * i + 1]));
+
+		obj.translation = Vec3f(params[8], params[9], .0f);
+		obj.objWidth = params[10];
+		obj.objHeight = params[11];
+
+		obj.zrotation = params[12] * ANGLE_TO_RAD_F;
+		obj.catalogId = params[13];
+		obj.zheight = params[14];
+		obj.area = obj.objWidth * obj.objHeight;
+		obj.isFixed = isFixed;
+		obj.alignedTheWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_DESK) ? true : false;
+		obj.adjoinWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_DESK) ? true : false;
+		indepenFurArea += obj.area;
+		update_obj_boundingBox_and_vertices(obj,0);
+
+		//obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
+
+		objGroupMap[0].push_back(obj.id);
+
+		objects.push_back(obj);
+		objctNum++;
+		if (!isFixed) {
+			update_mask_by_object(&obj, furnitureMask);
+			freeObjIds.push_back(obj.id);
+		}
+		else
+			update_mask_by_object(&obj, furnitureMask_initial);//is a fixed object
+		float test = cv::sum(furnitureMask)[0];
+	}
+	void update_mask_by_wall(const wall* wal) {
+		vector<Point> contour;
+		vector<vector<Point>> contours;
+		float ax = wal->vertices[0][0], ay = wal->vertices[0][1], bx = wal->vertices[1][0], by = wal->vertices[1][1];
+		contour.push_back(card_to_graph_point(ax, ay));
+		contour.push_back(card_to_graph_point(bx, by));
+		float tx = (fabs(ax) > fabs(bx)) ? ax : bx;
+		float ty = (tx == ax) ? by:ay;
+		contour.push_back(card_to_graph_point(tx, ty));
+		contours.push_back(contour);
+		drawContours(furnitureMask_initial, contours, 0, 0, FILLED, 8);
+	}
 	void update_mask_by_object(const singleObj* obj, Mat_<uchar> & target, float movex = -1, float movey=-1) {
 		vector<Point> contour;
 		vector<vector<Point>> contours;
@@ -152,32 +187,22 @@ public:
 	float obstacleArea;
 	vector<int> freeObjIds;
 	vector<vector<float>> obstacles;
-	Room(float s_width=800.0f, float s_height=600.0f) {
+	Room() {
 		center = Vec3f(.0f, .0f, .0f);
 		objctNum = 0;
 		wallNum = 0;
-		half_width = s_width/2;
-		half_height = s_height/2;
 		indepenFurArea = 0;
 		obstacleArea = 0;
+	}
+	void initialize_room(float s_width = 800.0f, float s_height = 600.0f) {
+		half_width = s_width / 2;
+		half_height = s_height / 2;
 		set_pairwise_map();
-		furnitureMask_initial = Mat::zeros(int(s_width +1), int(s_height +1), CV_8UC1);
+		furnitureMask_initial = Mat::zeros(int(s_width + 1), int(s_height + 1), CV_8UC1);
 		furnitureMask = furnitureMask_initial.clone();
 	}
 	Point card_to_graph_point(float x, float y) {
 		return Point(int(half_width + x), int(half_height - y));
-	}
-
-	float cal_overlapping_area(const Rect r1, const Rect r2) {
-		if (r1.x > r2.x + r2.width || r1.x + r1.width < r2.x)
-			return 0;
-		if (r1.y > r2.y + r2.height || r1.y + r1.height < r2.y)
-			return 0;
-		float dx = std::min(r1.x + r1.width, r2.x + r2.width) - std::max(r1.x, r2.x);
-		float dy = std::min(r1.y, r2.y) - std::max(r1.y - r1.height, r2.y - r2.height);
-		if ((dx >= 0) && (dy >= 0))
-			return dx*dy;
-		return 0;
 	}
 	void rot_around_point(const Vec3f& center, Vec2f& pos, float s, float c) {
 		// translate point back to origin:
@@ -193,8 +218,11 @@ public:
 		pos[1] = ynew + center[1];
 	}
 	void set_obj_zrotation(float new_rotation, int id) {
+		if (objects[id].zrotation == fmod(new_rotation, PI))
+			return;
+		float old = objects[id].zrotation;
 		objects[id].zrotation = fmod(new_rotation, PI);
-		update_obj_boundingBox_and_vertices(objects[id]);
+		update_obj_boundingBox_and_vertices(objects[id], old);
 	}
 
 	bool set_obj_translation(float tx, float ty, int id) {
@@ -203,10 +231,12 @@ public:
 
 		float movex = tx - objects[id].translation[0];
 		float movey = ty - objects[id].translation[1];
-		if (obj->boundingBox.x + movex <= -half_width || obj->boundingBox.x + obj->boundingBox.width + movex >= half_width
-			|| obj->boundingBox.y + movey >= half_height || obj->boundingBox.y - obj->boundingBox.height + movey <= -half_height) {
+		bool c1 = obj->boundingBox.x + movex <= -half_width;
+		bool c2 = obj->boundingBox.x + obj->boundingBox.width + movex >= half_width;
+		bool c3 = obj->boundingBox.y + movey >= half_height;
+		bool c4 = obj->boundingBox.y - obj->boundingBox.height + movey <= -half_height;
+		if (c1 || c2||c3 || c4)
 			return false;
-		}
 		update_mask_by_object(obj, tmpCanvas, movex, movey);
 
 		if (cv::sum(furnitureMask)[0] + obj->area < cv::sum(tmpCanvas)[0])
@@ -218,6 +248,8 @@ public:
 			obj->vertices[i][0] += movex;
 			obj->vertices[i][1] += movey;
 		}
+		obj->boundingBox.x += movex;
+		obj->boundingBox.y += movey;
 		return true;
 	}
 
@@ -275,26 +307,33 @@ public:
 		}
 		return min_dist;
 	}
-	void add_a_focal_point(Vec3f focalpoint, int groupId = 0) {
-		focalPoint_map[groupId] = focalpoint;
+	void add_a_focal_point(vector<float> fp) {
+		if(fp.size()>3)
+			focalPoint_map[fp[3]] = Vec3f(fp[0], fp[1], fp[2]);
+		else
+			focalPoint_map[0] = Vec3f(fp[0], fp[1], fp[2]);
 	}
-	void add_a_wall(Vec3f m_position, float rot, float w_width, float w_height) {
+
+	// params: Vec3f m_position, float rot, float w_width, float w_height) {
+	void add_a_wall(vector<float> params){
 		wall newWall;
 		newWall.id = walls.size();
-		newWall.position = m_position;
-		newWall.zrotation = rot * ANGLE_TO_RAD_F;
-		newWall.width = w_width;
-		newWall.zheight = w_height;
-		setup_wall_equation(m_position, rot, newWall.a, newWall.b, newWall.c);
-		initialize_vertices_wall(newWall);
+		newWall.zheight = params[4];
+		if (params.size() == 5)
+			init_wall_by_length(&newWall, params);
+		else
+			init_wall_by_coords(&newWall, params);
 		walls.push_back(newWall);
 		wallNum++;
-
+		if (fabs(fmod(newWall.zrotation, 90)) > 0.01)
+			update_mask_by_wall(&newWall);
 	}
-
-	void add_an_object(vector<float> params, int groupId = 0, bool isFixed = false) {
+	void add_an_object(vector<float> params, bool isFixed = false) {
 		if (params.size() < 15) {
-			vector<float> vertices = get_vertices_by_pos(params[0], params[1], params[2]/2, params[3]/2);
+			float hw = params[2] / 2, hh = params[3] / 2;
+			float cx = params[0], cy = params[1];
+			float res[8] = { -hw + cx, hh + cy, hw + cx, hh + cy, hw + cx, -hh + cy, -hw + cx, -hh + cy };
+			vector<float>vertices(res, res + 8);// get_vertices_by_pos(params[0], params[1], params[2] / 2, params[3] / 2);
 			params.insert(params.begin(), vertices.begin(), vertices.end());
 		}
 		switch (int(params[13]))
@@ -315,7 +354,9 @@ public:
 			params[13] = 8;
 			break;
 		}
-		params.push_back(groupId);
+		# default groupid is 0
+		if(params.size()<16)
+			params.push_back(0);
 		initial_object_by_parameters(params, isFixed);
 	}
 
@@ -331,15 +372,15 @@ public:
 		cout << "obstacleArea:  " << obstacleArea<<endl;
 		obstacles.push_back(vertices);
 	}
-			
-	void update_obj_boundingBox_and_vertices(singleObj& obj) {
-		float s = sin(obj.zrotation);
-		float c = cos(obj.zrotation);
+
+	void update_obj_boundingBox_and_vertices(singleObj& obj, float oldRot) {
+		float s = sin(obj.zrotation - oldRot);
+		float c = cos(obj.zrotation- oldRot);
 		for (int i = 0; i < 4; i++)
 			rot_around_point(obj.translation, obj.vertices[i],s,c);
 		vector<float> xbox = { obj.vertices[0][0], obj.vertices[1][0], obj.vertices[2][0], obj.vertices[3][0]};
 		vector<float> ybox = { obj.vertices[0][1], obj.vertices[1][1], obj.vertices[2][1], obj.vertices[3][1] };
-		
+
 		vector<float>::iterator it = min_element(xbox.begin(), xbox.end());
 		//make sure bounding box start vertex is at the begining
 		int startIdx = distance(xbox.begin(), it);

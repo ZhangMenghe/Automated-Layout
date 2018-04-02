@@ -63,11 +63,6 @@ float layoutConstrains::t(float d, float m, float M, int a) {
 // Mcv(I) that minimize the overlap between furniture(with space)
 // the minimal the better
 void layoutConstrains::cal_clearance_violation(float& mcv) {
-	/*for (int i = 0; i < room->objctNum; i++) {		
-		for (int j = i + 1; j < room->objctNum; j++) {
-			mcv += room->cal_overlapping_area(room->objects[i].boundingBox, room->objects[j].boundingBox);
-		}
-	}*/
 	float overlappingFurArea= cv::sum(room->furnitureMask)[0] - room->obstacleArea;
 	mcv = room->indepenFurArea - overlappingFurArea;
 	if (mcv < 0)
@@ -256,6 +251,8 @@ void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 			msy -= maxS;
 		}
 	}
+	if (msy == INFINITY)
+		msy = 0;
 }
 
 vector<float> layoutConstrains::get_all_constrain_terms() {

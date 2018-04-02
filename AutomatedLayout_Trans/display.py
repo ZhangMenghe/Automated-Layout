@@ -2,20 +2,24 @@ import numpy as np
 import cv2
 import math
 class plotRoom():
-    def __init__(self, winSize=(1000,800),roomSize=(800,600), resfile_name = "recommendation.txt"):
+    def __init__(self, resfile_name = "recommendation.txt"):
         try:
             fp = open(resfile_name, 'r')
             contents = fp.readlines()
         finally:
             fp.close()
-        self.win = np.zeros([winSize[1], winSize[0], 3], np.uint8)
-        self.roomSize = roomSize
-        self.win_room_offx = (winSize[0] - roomSize[0])/2
-        self.win_room_offy = (winSize[1] - roomSize[1])/2
+        roomSize = contents[0].split(' ')
+        #roomsize: width, height
+        self.roomSize = (int(roomSize[1]), int(roomSize[2]))
+        self.win_room_offx = 50
+        self.win_room_offy = 50
+
+        self.win = np.zeros([self.roomSize[1]+ 100, self.roomSize[0]+100, 3], np.uint8)
         self.unexpected_chars = ['[',']','from','x','(',')','\n',',']
+
         state = -1
-        i=0
-        while (i<len(contents)):
+        i=1
+        while i<len(contents):
             line = contents[i]
             words = line.split('\t|\t')
             if(words[0] == "WALL_Id"):
