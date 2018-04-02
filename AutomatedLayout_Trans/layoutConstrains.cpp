@@ -267,7 +267,7 @@ vector<float> layoutConstrains::get_all_constrain_terms() {
 	cal_circulation_term(mci);
 	mci /= 10000;
 	cal_pairwise_relationship(mpd, mpa);
-	//mpd /= 10;
+	mpd /= 10;
 	mpa = abs(mpa)*10;
 	cal_conversation_term(mcd, mca);
 	mcd *= 1000;
@@ -277,8 +277,8 @@ vector<float> layoutConstrains::get_all_constrain_terms() {
 	if(room->wallNum!=0)
 		cal_alignment_term(mfa, mwa);
 	
-	mfa *= 3;
-	mwa *= 3;
+	mfa *= 30;
+	mwa *= 30;
 	mfa = abs(mfa);
 	mwa = abs(mwa);
 
@@ -288,9 +288,10 @@ vector<float> layoutConstrains::get_all_constrain_terms() {
 		cal_emphasis_term(mef, msy);
 	
 	mef = abs(mef) * 10;
-	msy /= 20;
+	//msy /= 20;
 
 	float parameters[] = { mcv, mci, mpd, mpa, mcd, mca, mvb, mfa, mwa, mef, msy };
+	// display parameter weights
 	string content = "";
 	string split = "----";
 	for (int i = 0; i < 11; i++)

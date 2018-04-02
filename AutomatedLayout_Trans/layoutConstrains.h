@@ -3,12 +3,13 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "include\opencv2\core.hpp"
-#include "include\opencv2\imgproc.hpp"
-#include "include\opencv2\highgui.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "room.h"
+
 using namespace std;
 using namespace cv;
+
 class layoutConstrains {
 private:
 	Room *room;

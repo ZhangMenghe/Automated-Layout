@@ -15,14 +15,14 @@ class plotRoom():
         self.unexpected_chars = ['[',']','from','x','(',')','\n',',']
         state = -1
         i=0
-        while i<len(contents):
+        while (i<len(contents)):
             line = contents[i]
             words = line.split('\t|\t')
             if(words[0] == "WALL_Id"):
                 state = 0
-            elif(words[0]=="OBJ_Id"):
+            elif(words[0]=="FURNITURE_Id"):
                 state = 1
-            elif(words[0]=="FocalPoint"):
+            elif(words[0]=="Point_Focal"):
                 state = 2
             elif(words[0]=="Obstacle"):
             	state = 3
@@ -32,7 +32,8 @@ class plotRoom():
                 if(state == 0):
                     self.draw_wall(words)
                 elif(state == 1):
-                    recommands = contents[i+3].split('\t|\t')
+                    print(words)
+                    recommands = contents[i+2].split('\t|\t')
                     #self.draw_boundingbox(words, recommands)
                     self.draw_object(words,recommands)
                     i+=3
@@ -41,8 +42,7 @@ class plotRoom():
                 elif(state==3):
                 	self.draw_obstacles(words)
                 elif(state==4):
-                    self.draw_debugBox(contents[i:i+3])
-                    i = i+2
+                    self.draw_debugBox(words)
             i+=1
         cv2.imshow("result", self.win)
         cv2.waitKey(0)
@@ -74,7 +74,7 @@ class plotRoom():
 
         cv2.rectangle(self.win, (miny,minx), (maxy,maxx), (0,255,0), 1)
 
-    def draw_debugBox(self, boxList):
+    def draw_debugBox(self, box):
         cb = [0,0,255]
         for n,box in enumerate(boxList):
             box = box.split('\t|\t')

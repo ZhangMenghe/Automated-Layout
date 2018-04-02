@@ -166,14 +166,13 @@ void automatedLayout::display_suggestions() {
 	ofstream outfile;
 	outfile.open("E:/recommendation.txt", 'w');
 	if (outfile.is_open()) {
-		outfile << "WALL_Id\t|\tzheight\t|\tvertices\r\n";
+		outfile << "WALL_Id\t|\tzheight\t|\tvertices\t|\tzrotation\r\n";
 		for (int i = 0; i < room->wallNum; i++) {
 			wall * tmp = &room->walls[i];
-			outfile << to_string(tmp->id) << "\t|\t" << to_string(tmp->zheight) << "\t|\t" <<tmp->vertices[0] << "\t|\t" << tmp->vertices[1]<<"\r\n";
+			outfile << to_string(tmp->id) << "\t|\t" << to_string(tmp->zheight) << "\t|\t" <<tmp->vertices[0] << "\t|\t" << tmp->vertices[1]<< "\t|\t"<<tmp->zrotation<<"\r\n";
 		}
-
-		outfile << "OBJ_Id\t|\tCategory\t|\tHeight\t|\tObjWidth\t|\tObjHeight\r\n";
 		for (int i = 0; i < room->objctNum; i++) {
+			outfile << "FURNITURE_Id\t|\tCategory\t|\tHeight\t|\tObjWidth\t|\tObjHeight\r\n";
 			singleObj *tmp = &room->objects[i];
 			outfile << tmp->id << "\t|\t" << tmp->catalogId  << "\t|\t"<<tmp->zheight<< "\t|\t"<<tmp->objWidth<< "\t|\t"<<tmp->objHeight;
 			
@@ -191,7 +190,7 @@ void automatedLayout::display_suggestions() {
 			obstacleContent += "\r\n";
 		}
 		outfile << obstacleContent;
-		outfile << "FocalPoint\t|\tPosition\r\n";
+		outfile << "Point_Focal\t|\tPosition\r\n";
 		for (map<int, Vec3f>::iterator it = room->focalPoint_map.begin(); it != room->focalPoint_map.end(); it++)
 			outfile << it->first << "\t|\t" << it->second << "\r\n";
 		outfile.close();

@@ -8,6 +8,9 @@
 #include <vector>
 #include <random>
 #include <fstream>
+
+using namespace cv;
+
 class automatedLayout
 {
 private:

@@ -2,7 +2,7 @@
 #include <vector>
 #include <map>
 #include <utility>
-#include "include/opencv2/core.hpp"
+#include "opencv2/core/core.hpp"
 #include "predefinedConstrains.h"
 
 //#include "utils.h"
@@ -296,6 +296,24 @@ public:
 		if (params.size() < 15) {
 			vector<float> vertices = get_vertices_by_pos(params[0], params[1], params[2]/2, params[3]/2);
 			params.insert(params.begin(), vertices.begin(), vertices.end());
+		}
+		switch (int(params[13]))
+		{
+		case 0:
+			params[13] = 4;
+			break;
+		case 3:
+			params[13] = 0;
+			break;
+		case 8:
+			params[13] = 2;
+			break;
+		case 9:
+			params[13] = 7;
+			break;
+		default:
+			params[13] = 8;
+			break;
 		}
 		params.push_back(groupId);
 		initial_object_by_parameters(params, isFixed);

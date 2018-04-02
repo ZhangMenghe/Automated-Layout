@@ -78,12 +78,17 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 			//uncomment this to make those merged object as free objects
 		sort(groupedIds.begin(), groupedIds.end());
 		for (int compareIdx = fixedObjParams.size() - 1, gidx = groupedIds.size()-1; compareIdx > -1; ) {
+			if (gidx < 0) {
+				for(; compareIdx > -1;compareIdx--)
+					room->add_an_object(fixedObjParams[compareIdx]);
+				break;
+			}
 			if (compareIdx > groupedIds[gidx]) {
 				//vector<Point2f> rect1;
 				//for (int i = 0; i < 4; i++)
 				//	rect1.push_back(Point2f(fixedObjParams[compareIdx][2 * i], fixedObjParams[compareIdx][2 * i + 1]));
 				//debug_vector.push_back(rect1);
-				room->add_an_object(fixedObjParams[compareIdx]);
+				room->add_an_object(fixedObjParams[compareIdx],0,true);
 				compareIdx--;
 			}
 			else if (compareIdx == groupedIds[gidx]) {

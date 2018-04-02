@@ -1,5 +1,5 @@
 #pragma once
-#include "include\opencv2\core\core.hpp"
+#include "opencv2/core/core.hpp"
 #include <iostream>
 #include <fstream>
 #include <math.h>  
