@@ -93,7 +93,7 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 				//for (int i = 0; i < 4; i++)
 				//	rect1.push_back(Point2f(fixedObjParams[compareIdx][2 * i], fixedObjParams[compareIdx][2 * i + 1]));
 				//debug_vector.push_back(rect1);
-				room->add_an_object(fixedObjParams[compareIdx],0,true);
+				room->add_an_object(fixedObjParams[compareIdx],true);
 				compareIdx--;
 			}
 			else if (compareIdx == groupedIds[gidx]) {

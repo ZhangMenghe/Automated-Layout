@@ -121,8 +121,8 @@ private :
 		obj.zheight = params[14];
 		obj.area = obj.objWidth * obj.objHeight;
 		obj.isFixed = isFixed;
-		obj.alignedTheWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_DESK) ? true : false;
-		obj.adjoinWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_DESK) ? true : false;
+		obj.alignedTheWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_TABLE) ? true : false;
+		obj.adjoinWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_TABLE) ? true : false;
 		indepenFurArea += obj.area;
 		update_obj_boundingBox_and_vertices(obj,0);
 
@@ -338,23 +338,23 @@ public:
 		}
 		switch (int(params[13]))
 		{
-		case 0:
-			params[13] = 4;
+		case 1:
+			params[13] = TYPE_FLOOR;
 			break;
-		case 3:
-			params[13] = 0;
+		case 3://chair
+			params[13] = TYPE_CHAIR;
 			break;
 		case 8:
-			params[13] = 2;
+			params[13] = TYPE_WALL;
 			break;
-		case 9:
-			params[13] = 7;
+		case 10:
+			params[13] = TYPE_OTHER;
 			break;
-		default:
-			params[13] = 8;
+		case 11:
+			params[13] = TYPE_CEILING;
 			break;
 		}
-		# default groupid is 0
+		//default groupid is 0
 		if(params.size()<16)
 			params.push_back(0);
 		initial_object_by_parameters(params, isFixed);

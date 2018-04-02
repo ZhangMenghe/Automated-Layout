@@ -21,6 +21,9 @@
 #define TYPE_SHELF 6
 #define TYPE_TABLE 7
 #define TYPE_OTHER 8
+#define TYPE_OTHERONWall 9
 #define TYPE_WALL 100
+#define TYPE_FLOOR 101
+#define TYPE_CEILING 102
 
 #endif // !__PREDEFINE__
