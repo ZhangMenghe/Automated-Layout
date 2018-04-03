@@ -344,7 +344,7 @@ public:
 		if (fabs(fmod(newWall.zrotation, 90)) > 0.01)
 			update_mask_by_wall(&newWall);
 	}
-	void add_an_object(vector<float> params, bool isFixed = false) {
+	void add_an_object(vector<float> params, bool isPrevious = false, bool isFixed = false) {
 		if (params.size() < 15) {
 			float hw = params[2] / 2, hh = params[3] / 2;
 			float cx = params[0], cy = params[1];
@@ -352,24 +352,27 @@ public:
 			vector<float>vertices(res, res + 8);// get_vertices_by_pos(params[0], params[1], params[2] / 2, params[3] / 2);
 			params.insert(params.begin(), vertices.begin(), vertices.end());
 		}
-		switch (int(params[13]))
-		{
-		case 1:
-			params[13] = TYPE_FLOOR;
-			break;
-		case 3://chair
-			params[13] = TYPE_CHAIR;
-			break;
-		case 8:
-			params[13] = TYPE_WALL;
-			break;
-		case 10:
-			params[13] = TYPE_OTHER;
-			break;
-		case 11:
-			params[13] = TYPE_CEILING;
-			break;
+		if (isPrevious) {
+			switch (int(params[13]))
+			{
+			case 1:
+				params[13] = TYPE_FLOOR;
+				break;
+			case 3://chair
+				params[13] = TYPE_CHAIR;
+				break;
+			case 8:
+				params[13] = TYPE_WALL;
+				break;
+			case 10:
+				params[13] = TYPE_OTHER;
+				break;
+			case 11:
+				params[13] = TYPE_CEILING;
+				break;
+			}
 		}
+
 		//default groupid is 0
 		if(params.size()<16)
 			params.push_back(0);

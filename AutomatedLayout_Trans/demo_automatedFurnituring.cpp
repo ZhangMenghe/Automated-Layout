@@ -83,7 +83,7 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 		for (int compareIdx = fixedObjParams.size() - 1, gidx = groupedIds.size()-1; compareIdx > -1; ) {
 			if (gidx < 0) {
 				for(; compareIdx > -1;compareIdx--)
-					room->add_an_object(fixedObjParams[compareIdx]);
+					room->add_an_object(fixedObjParams[compareIdx], true);
 				break;
 			}
 			if (compareIdx > groupedIds[gidx]) {
