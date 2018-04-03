@@ -1,7 +1,6 @@
 #pragma once
 #ifndef __PREDEFINE__
 #define __PREDEFINE__
-#define PI  3.14159265358979323846
 #define ANGLE_TO_RAD_F 0.0174533 //0.01745329251994329576923690768489
 
 #define PersonSize 40//40cm x 40 cm

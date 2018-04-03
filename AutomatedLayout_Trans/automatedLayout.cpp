@@ -40,19 +40,16 @@ void automatedLayout::random_along_wall(int furnitureID) {
 		mp = -1;
 	else
 		mp = 1;
-	
 	if (fabs(p2[0]-p1[0]) < 0.001) {
 		rh = p1[1] + rand() % int(h_ran)+ selectedObj->boundingBox.height / 2;
 		if (!room->set_obj_translation(selecWall->position[0] + mp * (selectedObj->boundingBox.width / 2 + 0.01), rh, furnitureID))
 			cout << "fail" << endl;
 	}
-		
 	else if (fabs(p2[1]-p1[1]) < 0.001) {
 		rw = p1[0] + rand() % int(w_ran)+ selectedObj->boundingBox.width / 2;
 		if(!room->set_obj_translation(rw, selecWall->position[1] + mp * (selectedObj->boundingBox.height / 2+0.01), furnitureID))
 			cout << "fail" << endl;
 	}
-		
 	else {
 		float length = (rotOrNot) ? selectedObj->objHeight : selectedObj->objWidth;
 		rw = p1[0] + rand() % int(w_ran) + length / 2;
@@ -60,7 +57,7 @@ void automatedLayout::random_along_wall(int furnitureID) {
 		float a = selecWall->a, b = selecWall->b, c = selecWall->c;
 		float y = (-c - a * rw) / b;
 		float tk = b / a, tb = y - tk * rw;
-		
+
 		float axbyc= length / 2 * sqrtf(a*a + b * b);
 		float tx = (axbyc - c - b * tb) / (a+b*tk);
 		float ty = tk * tx + tb;
@@ -70,7 +67,6 @@ void automatedLayout::random_along_wall(int furnitureID) {
 		}
 		room->set_obj_translation(tx, ty, furnitureID);
 	}
-		
 	//todo!!!!
 }
 void automatedLayout::random_translation(int furnitureID, default_random_engine generator) {
@@ -117,8 +113,8 @@ void automatedLayout::randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& 
 
 	else if (flag == 1) {
 		//perturb_orientation();
-		std::normal_distribution<float> distribution_rot(0, PI/6);
-		
+		std::normal_distribution<float> distribution_rot(0, CV_PI/6);
+
 		singleObj* selectedObj = &room->objects[furnitureID];
 		if(selectedObj->alignedTheWall)
 			room->set_obj_zrotation(room->walls[rand()%room->wallNum].zrotation, furnitureID);
@@ -165,8 +161,9 @@ void automatedLayout::initial_assignment(){
 	}
 	res_rotation.push(room->get_objs_rotation());
 	res_transform.push(room->get_objs_transformation());
-	min_cost = cost_function();
 	room->update_furniture_mask();
+	min_cost = cost_function();
+	
 }
 void automatedLayout::Metropolis_Hastings() {
 	float p0, cost, p, alpha;
@@ -178,7 +175,7 @@ void automatedLayout::Metropolis_Hastings() {
 		return;
 	cost = cost_function();
 	p0 = density_function(cost);
-	
+
 	randomly_perturb(perturb_ori_trans, perturb_ori_rot, perturb_id);
 
 	cost = cost_function();
@@ -188,7 +185,7 @@ void automatedLayout::Metropolis_Hastings() {
 	if (alpha > 1)
 		alpha = 1.0;
 
-	// change back to original one 
+	// change back to original one
 	if (alpha > t) {
 		for (int i = 0; i < perturb_id.size(); i++) {
 			room->set_obj_zrotation(perturb_ori_rot[i], perturb_id[i]);
@@ -213,7 +210,7 @@ void automatedLayout::generate_suggestions() {
 		cout << "Times:" << i << endl;
 		Metropolis_Hastings();
 	}
-				
+
 }
 
 void automatedLayout::display_suggestions() {
@@ -245,16 +242,16 @@ void automatedLayout::display_suggestions() {
 			outfile << "FURNITURE_Id\t|\tCategory\t|\tHeight\t|\tObjWidth\t|\tObjHeight\r\n";
 			singleObj *tmp = &room->objects[i];
 			outfile << tmp->id << "\t|\t" << tmp->catalogId  << "\t|\t"<<tmp->zheight<< "\t|\t"<<tmp->objWidth<< "\t|\t"<<tmp->objHeight;
-			
+
 			outfile << "\r\n";
-			
+
 			for (int res = resSize; res > 0; res--)
 				outfile << "Recommendation" << res << "\t|\t" << trans_result[res - 1][i] << "\t|\t" << rot_result[res - 1][i] << "\r\n";
 		}
 		outfile << "Obstacle\t|\tVertices\r\n";
 		string obstacleContent = "";
 		for (int i = 0; i < room->obstacles.size(); i++) {
-			
+
 			for (int j = 0; j < 8; j++)
 				obstacleContent += to_string(room->obstacles[i][j]) + "\t|\t";
 			obstacleContent += "\r\n";

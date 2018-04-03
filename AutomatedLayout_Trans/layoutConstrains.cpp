@@ -1,7 +1,7 @@
 #include "layoutConstrains.h"
 #include "predefinedConstrains.h"
 
-#include <algorithm> 
+#include <algorithm>
 #include <math.h>
 using namespace std;
 using namespace cv;
@@ -59,11 +59,11 @@ float layoutConstrains::t(float d, float m, float M, int a) {
 		return 1.0f;
 }
 
-//Clearance : 
+//Clearance :
 // Mcv(I) that minimize the overlap between furniture(with space)
 // the minimal the better
 void layoutConstrains::cal_clearance_violation(float& mcv) {
-	float overlappingFurArea= cv::sum(room->furnitureMask)[0] - room->obstacleArea;
+	float overlappingFurArea= cv::sum(room->furnitureMask)[0] - room->obstacleArea - room->wallArea;
 	mcv = room->indepenFurArea - overlappingFurArea;
 	if (mcv < 0)
 		mcv = 0;
@@ -109,7 +109,7 @@ void layoutConstrains::cal_pairwise_relationship(float& mpd, float& mpa) {
 				Vec3f g(-sin(room->objects[j].zrotation), cos(room->objects[j].zrotation), 0.0);
 				float cosfg = f.dot(g);
 				mpa -= 8 * cosfg*cosfg*cosfg*cosfg - 8 * cosfg*cosfg + 1;
-			}			
+			}
 		}
 	}
 }
@@ -131,7 +131,7 @@ void layoutConstrains::cal_conversation_term(float& mcd, float& mca) {
 			if (tobj->catalogId == TYPE_CHAIR) {
 				for (vector<int>::iterator ity = itx + 1; ity != itemIdx.end(); ++ity) {
 					singleObj * tmp = &room->objects[*ity];
-					
+
 					if (tmp->catalogId == TYPE_CHAIR) {
 						mcd += t(dist_between_Vectors(tobj->translation, tmp->translation), CONVERSATION_M_MIN, CONVERSATION_M_MAX);
 						//compute phi_fg and phi_gf
@@ -150,7 +150,7 @@ void layoutConstrains::cal_conversation_term(float& mcd, float& mca) {
 //balance:
 //place the mean of the distribution of visual weight at the center of the composition
 void layoutConstrains::cal_balance_term(float &mvb) {
-	float sumArea = .0f, oneArea;
+	float sumArea = .0f;
 	Vec3f centroid(.0f, .0f, .0f);
 	for (int i = 0; i < room->objctNum; i++)
 		centroid += room->objects[i].area * room->objects[i].translation;
@@ -177,8 +177,8 @@ void layoutConstrains::cal_alignment_term(float& mfa, float&mwa) {
 			}
 			float wallDist = room->get_nearest_wall_dist(tobj);
 			if(wallDist > 0)
-				mwa -= cos(4 * (tobj->zrotation - room->walls[tobj->nearestWall].zrotation - PI/2));
-		}	
+				mwa -= cos(4 * (tobj->zrotation - room->walls[tobj->nearestWall].zrotation - CV_PI /2));
+		}
 	}
 }
 
@@ -205,17 +205,17 @@ void layoutConstrains::get_all_reflection(map<int, Vec3f> focalPoint_map, vector
 			}
 			else if (refk == 0) {
 				reflectTranslate.push_back(Vec3f(objPos[0], 2 * focalPoint[1] - objPos[1], .0f));
-				reflectZrot.push_back(PI - tobj->zrotation);
+				reflectZrot.push_back(CV_PI - tobj->zrotation);
 				idx++;
 			}
 			else {
 				float x = 2 * objPos[1] + (invk - refk)*objPos[0] - 2 * b;
 				float y = -invk * x + objPos[1] + invk*objPos[0];
 				reflectTranslate.push_back(Vec3f(x, y, .0f));
-				reflectZrot.push_back(PI - tobj->zrotation - 2 * atan2f(objPos[1] - y, objPos[0] - x));
+				reflectZrot.push_back(CV_PI - tobj->zrotation - 2 * atan2f(objPos[1] - y, objPos[0] - x));
 				idx++;
 			}
-				
+
 		}
 	}
 }
@@ -224,7 +224,6 @@ void layoutConstrains::get_all_reflection(map<int, Vec3f> focalPoint_map, vector
 void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 	vector<int>itemIdx;
 	mef = 0; msy = 0;
-	float phi_gps;
 	vector<Vec3f> reflectTranslate;
 	vector<float> reflectZrot;
 	get_all_reflection(room->focalPoint_map, reflectTranslate, reflectZrot);
@@ -259,7 +258,7 @@ vector<float> layoutConstrains::get_all_constrain_terms() {
 	float mcv =0, mci=0, mpd=0, mpa=0, mcd=0, mca=0, mvb=0, mfa=0, mwa=0, mef=0, msy=0;
 	// avoid overlapping of furnitures
 	cal_clearance_violation(mcv);
-	mcv *= 10;
+	mcv *= 100;
 	// gurantee enough space for human to move
 	cal_circulation_term(mci);
 	mci /= 10000;
@@ -269,11 +268,11 @@ vector<float> layoutConstrains::get_all_constrain_terms() {
 	cal_conversation_term(mcd, mca);
 	mcd *= 1000;
 	mca = abs(mca)/100;
-	
+
 	cal_balance_term(mvb);
 	if(room->wallNum!=0)
 		cal_alignment_term(mfa, mwa);
-	
+
 	mfa *= 30;
 	mwa *= 30;
 	mfa = abs(mfa);
@@ -283,9 +282,9 @@ vector<float> layoutConstrains::get_all_constrain_terms() {
 	// msy measure the symmetry term
 	if(!room->focalPoint_map.empty())
 		cal_emphasis_term(mef, msy);
-	
+
 	mef = abs(mef) * 10;
-	//msy /= 20;
+	msy /= 20;
 
 	float parameters[] = { mcv, mci, mpd, mpa, mcd, mca, mvb, mfa, mwa, mef, msy };
 	// display parameter weights

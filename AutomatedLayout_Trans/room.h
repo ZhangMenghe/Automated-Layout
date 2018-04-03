@@ -94,7 +94,7 @@ private :
 		}
 		else {
 			newWall->a = (by - ay) / (bx - ax); newWall->b = -1; newWall->c = -(newWall->a*ax - ay);
-			newWall->zrotation = atanf(newWall->a)/PI *180;
+			newWall->zrotation = atanf(newWall->a)/ CV_PI *180;
 		}
 	}
 	void init_wall_by_length(wall *newWall, vector<float> params) {
@@ -103,6 +103,16 @@ private :
 		newWall->width = params[3];
 		setup_wall_equation(newWall->position, newWall->zrotation, newWall->a, newWall->b, newWall->c);
 		initialize_vertices_wall(newWall);
+	}
+	float get_single_obj_maskArea(vector<Vec2f> vertices) {
+		vector<vector<Point>> contours;
+		vector<Point> contour;
+		for (int n = 0; n < 4; n++)
+			contour.push_back(card_to_graph_point(vertices[n][0], vertices[n][1]));
+		contours.push_back(contour);
+		Mat_<uchar> canvas = Mat::zeros(half_height*2, half_width*2, CV_8UC1);
+		drawContours(canvas, contours, -1, 1, FILLED, 8);
+		return cv::sum(canvas)[0];
 	}
 	// 4*2 vertices, 2 center, 2 size, angle, label, zheight
 	void initial_object_by_parameters(vector<float>params, bool isFixed = false) {
@@ -123,9 +133,11 @@ private :
 		obj.isFixed = isFixed;
 		obj.alignedTheWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_TABLE) ? true : false;
 		obj.adjoinWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_TABLE) ? true : false;
-		indepenFurArea += obj.area;
-		update_obj_boundingBox_and_vertices(obj,0);
 
+
+		
+		update_obj_boundingBox_and_vertices(obj,0);
+		indepenFurArea += get_single_obj_maskArea(obj.vertices);
 		//obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
 
 		objGroupMap[0].push_back(obj.id);
@@ -133,13 +145,14 @@ private :
 		objects.push_back(obj);
 		objctNum++;
 		if (!isFixed) {
-			update_mask_by_object(&obj, furnitureMask);
+			//update_mask_by_object(&obj, furnitureMask);
 			freeObjIds.push_back(obj.id);
 		}
 		else
 			update_mask_by_object(&obj, furnitureMask_initial);//is a fixed object
 		float test = cv::sum(furnitureMask)[0];
 	}
+
 	void update_mask_by_wall(const wall* wal) {
 		vector<Point> contour;
 		vector<vector<Point>> contours;
@@ -150,7 +163,9 @@ private :
 		float ty = (tx == ax) ? by:ay;
 		contour.push_back(card_to_graph_point(tx, ty));
 		contours.push_back(contour);
-		drawContours(furnitureMask_initial, contours, 0, 0, FILLED, 8);
+		float single_wallArea = cv::sum(furnitureMask_initial)[0];
+		drawContours(furnitureMask_initial, contours, 0, 1, FILLED, 8);
+		wallArea += cv::sum(furnitureMask_initial)[0]- single_wallArea;
 	}
 	void update_mask_by_object(const singleObj* obj, Mat_<uchar> & target, float movex = -1, float movey=-1) {
 		vector<Point> contour;
@@ -185,6 +200,7 @@ public:
 	float half_height;
 	float indepenFurArea;
 	float obstacleArea;
+	float wallArea;
 	vector<int> freeObjIds;
 	vector<vector<float>> obstacles;
 	Room() {
@@ -218,10 +234,10 @@ public:
 		pos[1] = ynew + center[1];
 	}
 	void set_obj_zrotation(float new_rotation, int id) {
-		if (objects[id].zrotation == fmod(new_rotation, PI))
+		if (objects[id].zrotation == fmod(new_rotation, CV_PI))
 			return;
 		float old = objects[id].zrotation;
-		objects[id].zrotation = fmod(new_rotation, PI);
+		objects[id].zrotation = fmod(new_rotation, CV_PI);
 		update_obj_boundingBox_and_vertices(objects[id], old);
 	}
 
@@ -417,6 +433,7 @@ public:
 
 	void update_furniture_mask() {
 		furnitureMask = furnitureMask_initial.clone();
+		float test1 = cv::sum(furnitureMask)[0];
 		vector<vector<Point>> contours;
 		for (int i = 0; i < objctNum; i++) {
 			singleObj * obj = &objects[i];
@@ -425,7 +442,9 @@ public:
 				contour.push_back(card_to_graph_point(obj->vertices[n][0], obj->vertices[n][1]));
 			contours.push_back(contour);
 		}
+		//drawContours(furnitureMask, contours, 0, 1, FILLED, 8);
 		drawContours(furnitureMask, contours, -1, 1, FILLED, 8);
+		float test = cv::sum(furnitureMask)[0];
 	}
 	void change_obj_freeState(singleObj* obj) {
 		if (obj->isFixed)

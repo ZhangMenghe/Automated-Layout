@@ -30,12 +30,10 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 		parameters.push_back(param);
 		cateType.push_back(itemCate[0]);
 	}
-	
 	instream.close();
 	int itemNum = cateType.size();
 	vector<vector<float>> fixedObjParams;
 	vector<vector<float>> mergedObjParams;
-	int groupid;
 	vector<int> groupedIds;
 	int startId = 0;
 	if (cateType[0] == 'r') {
@@ -108,14 +106,10 @@ void parser_inputfile(const char* filename, Room * room, vector<float>& weights)
 		for (int i = 0; i < fixedObjParams.size(); i++)
 			room->add_an_object(fixedObjParams[i]);
 	}
-
-	
 	if (weights.size() < 11) {
 		for (int i = weights.size(); i < 11; i++)
 			weights.push_back(1.0f);
 	}
-
-
 	//TODO:CHECK OUTBOUND
 	/*room->add_a_wall(Vec3f(0, 300, 0), 90, 800, 10);
 	room->add_a_wall(Vec3f(400, 0, 0), 0, 600, 10);
@@ -137,7 +131,7 @@ int main(){
 	int r = strcpy_s(filename, 100, "E:/layoutParam.txt");
 	Room* room = new Room();
 	vector<float>weights;
-	parser_inputfile(filename, room, weights);	
+	parser_inputfile(filename, room, weights);
 	if (room != nullptr && (room->objctNum != 0 || room->wallNum != 0)) {
 		automatedLayout* layout = new automatedLayout(room, weights);
 		layout->generate_suggestions();
@@ -147,4 +141,3 @@ int main(){
 	system("pause");
 	return 0;
 }
-
