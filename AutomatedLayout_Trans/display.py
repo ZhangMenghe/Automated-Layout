@@ -15,13 +15,13 @@ class plotRoom():
         self.win_room_offy = 50
 
         self.win = np.zeros([self.roomSize[1]+ 100, self.roomSize[0]+100, 3], np.uint8)
-        self.unexpected_chars = ['[',']','from','x','(',')','\n',',']
+        # self.unexpected_chars = ['[',']','from','x','(',')','\n',',']
 
         state = -1
         i=1
         while i<len(contents):
             line = contents[i]
-            words = line.split('\t|\t')
+            words = line.split(' ')
             if(words[0] == "WALL_Id"):
                 state = 0
             elif(words[0]=="FURNITURE_Id"):
@@ -36,9 +36,7 @@ class plotRoom():
                 if(state == 0):
                     self.draw_wall(words)
                 elif(state == 1):
-                    print(words)
-                    recommands = contents[i+2].split('\t|\t')
-                    #self.draw_boundingbox(words, recommands)
+                    recommands = contents[i+3].split(' ')
                     self.draw_object(words,recommands)
                     i+=3
                 elif(state==2):
@@ -61,15 +59,14 @@ class plotRoom():
         y = float(res[1])
         return x,y
 
-    def TransferToGraph(self, word):
-        x,y = self.getPureNum(word)
-        xg = x+self.roomSize[0]/2 + self.win_room_offx
-        yg = self.roomSize[1]/2-y + self.win_room_offy
+    def TransferToGraph(self, x,y ):
+        xg = float(x) +self.roomSize[0]/2 + self.win_room_offx
+        yg = self.roomSize[1]/2-float(y) + self.win_room_offy
         return xg,yg
 
     def draw_wall(self, words):
-        ax,ay = self.TransferToGraph(words[2])
-        bx,by = self.TransferToGraph(words[3])
+        ax,ay = self.TransferToGraph(words[2], words[3])
+        bx,by = self.TransferToGraph(words[4], words[5])
         wall = cv2.line(self.win,(int(ax),int(ay)),(int(bx),int(by)),(255,0,0),3)
 
     def draw_boundingbox(self, vertices):
@@ -100,14 +97,10 @@ class plotRoom():
         cv2.drawContours(self.win, [vertices], 0, color=(0,0,255), thickness=2)
 
     def draw_object(self, words, recommands):
-        #print(words[4])
-        # get 2 original vertices
-        # ax,ay = self.getPureNum(words[3])
-        # bx,by = self.getPureNum(words[4])
         objWidth = float(words[3])
         objHeight = float(words[4])
-        transx, transy = self.TransferToGraph(recommands[1])
-        rot = float(recommands[2])/math.pi * 180
+        transx, transy = self.TransferToGraph(recommands[1], recommands[2])
+        rot = float(recommands[3])/math.pi * 180
         center = np.array([transx,transy])
         size = np.array([objWidth, objHeight])
         # size = np.array([abs(bx-ax), abs(by-ay)])
@@ -119,7 +112,7 @@ class plotRoom():
         self.draw_boundingbox(vertices)
 
     def draw_focal(self, words):
-        x, y = self.TransferToGraph(words[1])
+        x, y = self.TransferToGraph(words[1], words[2])
         cv2.circle(self.win, (int(x),int(y)), 20, (0,0,255), -1)
 
 plot_handle = plotRoom(resfile_name = "E:/recommendation.txt" )

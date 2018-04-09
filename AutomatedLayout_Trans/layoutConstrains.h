@@ -47,9 +47,9 @@ private:
 public:
 	layoutConstrains(Room* mr) {
 		room = mr;
-		constrain_terms = vector<float>(11, 0);
+		constrain_terms = vector<float>(11, -1);
 	}
-	vector<float> get_all_constrain_terms();
+	bool get_all_constrain_terms(vector<float> & params);
 
 };
 

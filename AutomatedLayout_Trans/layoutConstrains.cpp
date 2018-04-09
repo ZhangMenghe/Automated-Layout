@@ -254,11 +254,13 @@ void layoutConstrains::cal_emphasis_term(float& mef, float& msy, float gamma) {
 		msy = 0;
 }
 
-vector<float> layoutConstrains::get_all_constrain_terms() {
+bool layoutConstrains::get_all_constrain_terms(vector<float>& params) {
 	float mcv =0, mci=0, mpd=0, mpa=0, mcd=0, mca=0, mvb=0, mfa=0, mwa=0, mef=0, msy=0;
 	// avoid overlapping of furnitures
 	cal_clearance_violation(mcv);
-	mcv *= 100;
+	//cout << mcv << " ";
+	if (mcv > 500)
+		return false;
 	// gurantee enough space for human to move
 	cal_circulation_term(mci);
 	mci /= 10000;
@@ -292,7 +294,8 @@ vector<float> layoutConstrains::get_all_constrain_terms() {
 	string split = "----";
 	for (int i = 0; i < 11; i++)
 		content += to_string(parameters[i])+ split;
-	cout << content << endl;
+	//cout << content << endl;
 	constrain_terms.assign(parameters, parameters + 11);
-	return constrain_terms;
+	params = constrain_terms;
+	return true;
 }

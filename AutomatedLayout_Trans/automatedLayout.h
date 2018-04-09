@@ -19,7 +19,7 @@ private:
 	vector<float>weights;
 	float cost_function();
 	float density_function(float cost);
-	void randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid);
+	void randomly_perturb(vector<Vec3f>& ori_trans, vector<float>& ori_rot, vector<int>& selectedid, int flag);
 	void Metropolis_Hastings();
 	void random_translation(int furnitureID, default_random_engine generator);
 	void random_along_wall(int furnitureID);

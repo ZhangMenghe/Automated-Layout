@@ -388,7 +388,7 @@ public:
 		contours.push_back(contour);
 		drawContours(furnitureMask_initial, contours, -1, 1, FILLED, 8);
 		obstacleArea = cv::sum(furnitureMask_initial)[0];
-		cout << "obstacleArea:  " << obstacleArea<<endl;
+		//cout << "obstacleArea:  " << obstacleArea<<endl;
 		obstacles.push_back(vertices);
 	}
 
@@ -436,7 +436,7 @@ public:
 
 	void update_furniture_mask() {
 		furnitureMask = furnitureMask_initial.clone();
-		float test1 = cv::sum(furnitureMask)[0];
+		//float test1 = cv::sum(furnitureMask)[0];
 		vector<vector<Point>> contours;
 		for (int i = 0; i < objctNum; i++) {
 			singleObj * obj = &objects[i];
@@ -447,7 +447,7 @@ public:
 		}
 		//drawContours(furnitureMask, contours, 0, 1, FILLED, 8);
 		drawContours(furnitureMask, contours, -1, 1, FILLED, 8);
-		float test = cv::sum(furnitureMask)[0];
+		//float test = cv::sum(furnitureMask)[0];
 	}
 	void change_obj_freeState(singleObj* obj) {
 		if (obj->isFixed)
