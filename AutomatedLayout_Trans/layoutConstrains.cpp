@@ -258,25 +258,26 @@ bool layoutConstrains::get_all_constrain_terms(vector<float>& params) {
 	float mcv =0, mci=0, mpd=0, mpa=0, mcd=0, mca=0, mvb=0, mfa=0, mwa=0, mef=0, msy=0;
 	// avoid overlapping of furnitures
 	cal_clearance_violation(mcv);
-	//cout << mcv << " ";
-	if (mcv > 500)
+	if (mcv > room->overlappingThreshold)
 		return false;
+	
 	// gurantee enough space for human to move
 	cal_circulation_term(mci);
-	mci /= 10000;
+	mci /= 1000;
+
 	cal_pairwise_relationship(mpd, mpa);
-	mpd /= 10;
 	mpa = abs(mpa)*10;
+	
 	cal_conversation_term(mcd, mca);
-	mcd *= 1000;
+	mcd *= 10000;
 	mca = abs(mca)/100;
 
 	cal_balance_term(mvb);
 	if(room->wallNum!=0)
 		cal_alignment_term(mfa, mwa);
 
-	mfa *= 30;
-	mwa *= 30;
+	mfa *= 10;
+	mwa *= 10;
 	mfa = abs(mfa);
 	mwa = abs(mwa);
 
@@ -286,7 +287,7 @@ bool layoutConstrains::get_all_constrain_terms(vector<float>& params) {
 		cal_emphasis_term(mef, msy);
 
 	mef = abs(mef) * 10;
-	msy /= 20;
+	msy /= 10;
 
 	float parameters[] = { mcv, mci, mpd, mpa, mcd, mca, mvb, mfa, mwa, mef, msy };
 	// display parameter weights
@@ -294,7 +295,7 @@ bool layoutConstrains::get_all_constrain_terms(vector<float>& params) {
 	string split = "----";
 	for (int i = 0; i < 11; i++)
 		content += to_string(parameters[i])+ split;
-	//cout << content << endl;
+	cout << content << endl;
 	constrain_terms.assign(parameters, parameters + 11);
 	params = constrain_terms;
 	return true;

@@ -201,6 +201,7 @@ public:
 	float indepenFurArea;
 	float obstacleArea;
 	float wallArea;
+	float overlappingThreshold;
 	vector<int> freeObjIds;
 	vector<vector<float>> obstacles;
 	Room() {
@@ -213,6 +214,7 @@ public:
 	void initialize_room(float s_width = 800.0f, float s_height = 600.0f) {
 		half_width = s_width / 2;
 		half_height = s_height / 2;
+		overlappingThreshold = s_width * s_height * 0.005;
 		set_pairwise_map();
 		furnitureMask_initial = Mat::zeros(int(s_width + 1), int(s_height + 1), CV_8UC1);
 		furnitureMask = furnitureMask_initial.clone();
