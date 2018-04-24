@@ -30,11 +30,21 @@ void automatedLayout::random_along_wall(int furnitureID) {
 	//wall* selecWall = &room->walls[3];
 	srand(time(NULL));
 	int rotOrNot = rand() % 2;
+	float mwidth, mheight;
+	if (rotOrNot) {
+		mwidth = selectedObj->objHeight; mheight = selectedObj->objWidth;
+	}
+	else {
+		mwidth = selectedObj->objWidth; mheight = selectedObj->objHeight;
+	}
+
+		
 	float rotRand = (selecWall->zrotation<0)? 90- selecWall->zrotation + rotOrNot * 90 : selecWall->zrotation + rotOrNot * 90;
 	room->set_obj_zrotation(rotRand* ANGLE_TO_RAD_F, furnitureID);
+	//room->set_obj_zrotation(0, furnitureID);
 
 	Vec2f p1 = selecWall->vertices[0], p2 = selecWall->vertices[1];
-	float w_ran = p2[0] - p1[0] - selectedObj->boundingBox.width, h_ran = p2[1] - p1[1] - selectedObj->boundingBox.height;
+	float w_ran = p2[0] - p1[0] - mwidth, h_ran = p2[1] - p1[1] - mheight;
 	float rh , rw;
 
 	int mp;
@@ -42,25 +52,26 @@ void automatedLayout::random_along_wall(int furnitureID) {
 		mp = -1;
 	else
 		mp = 1;
+	//todo:not bounding box...
 	if (fabs(p2[0]-p1[0]) < 0.001) {
 		rh = p1[1] + rand() % int(h_ran)+ selectedObj->boundingBox.height / 2;
-		room->set_obj_translation(selecWall->position[0] + mp * (selectedObj->boundingBox.width / 2 + 0.01), rh, furnitureID);
+		room->set_obj_translation(selecWall->position[0] + mp * (mwidth / 2 + 0.01), rh, furnitureID);
 			//cout << "fail" << endl;
 	}
 	else if (fabs(p2[1]-p1[1]) < 0.001) {
 		rw = p1[0] + rand() % int(w_ran)+ selectedObj->boundingBox.width / 2;
-		!room->set_obj_translation(rw, selecWall->position[1] + mp * (selectedObj->boundingBox.height / 2 + 0.01), furnitureID);
+		!room->set_obj_translation(rw, selecWall->position[1] + mp * (mheight / 2 + 0.01), furnitureID);
 			//cout << "fail" << endl;
 	}
 	else {
-		float length = (rotOrNot) ? selectedObj->objHeight : selectedObj->objWidth;
-		rw = p1[0] + rand() % int(w_ran) + length / 2;
+		//float length = (rotOrNot) ? selectedObj->objHeight : selectedObj->objWidth;
+		rw = p1[0] + rand() % int(w_ran) + mwidth / 2;
 		// calculate corresponding position on wall(x->y)
 		float a = selecWall->a, b = selecWall->b, c = selecWall->c;
 		float y = (-c - a * rw) / b;
 		float tk = b / a, tb = y - tk * rw;
 
-		float axbyc= length / 2 * sqrtf(a*a + b * b);
+		float axbyc= mwidth / 2 * sqrtf(a*a + b * b);
 		float tx = (axbyc - c - b * tb) / (a+b*tk);
 		float ty = tk * tx + tb;
 		if (ty > room->half_height || ty < -room->half_height) {

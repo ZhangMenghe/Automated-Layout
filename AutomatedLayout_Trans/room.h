@@ -115,7 +115,7 @@ private :
 		return cv::sum(canvas)[0];
 	}
 	// 4*2 vertices, 2 center, 2 size, angle, label, zheight
-	void initial_object_by_parameters(vector<float>params, bool isFixed = false) {
+	void initial_object_by_parameters(vector<float>params, bool isFixed = false, bool isPrevious = false) {
 		singleObj obj;
 		obj.id = objects.size();
 		//vertices
@@ -133,10 +133,13 @@ private :
 		obj.isFixed = isFixed;
 		obj.alignedTheWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_TABLE) ? true : false;
 		obj.adjoinWall = (obj.catalogId == TYPE_SHELF || obj.catalogId == TYPE_BED || obj.catalogId == TYPE_TABLE) ? true : false;
-
-
 		
-		update_obj_boundingBox_and_vertices(obj,0);
+		if (isPrevious)
+			cout << "todo-nothing" << endl;
+			//update_obj_boundingBox_by_vertices(obj);
+		else
+			update_obj_boundingBox_and_vertices(obj, 0);
+		
 		indepenFurArea += get_single_obj_maskArea(obj.vertices);
 		//obj.nearestWall = find_nearest_wall(obj.translation[0], obj.translation[1]);
 
@@ -187,6 +190,7 @@ private :
 
 public:
 	//Rect2f boundingBox;
+	bool initialized;
 	Vec3f center;
 	vector<singleObj> objects;
 	vector<wall> walls;
@@ -210,8 +214,10 @@ public:
 		wallNum = 0;
 		indepenFurArea = 0;
 		obstacleArea = 0;
+		initialized = false;
 	}
 	void initialize_room(float s_width = 800.0f, float s_height = 600.0f) {
+		initialized = true;
 		half_width = s_width / 2;
 		half_height = s_height / 2;
 		overlappingThreshold = s_width * s_height * 0.005;
@@ -378,7 +384,7 @@ public:
 		//default groupid is 0
 		if(params.size()<16)
 			params.push_back(0);
-		initial_object_by_parameters(params, isFixed);
+		initial_object_by_parameters(params, isFixed, isPrevious);
 	}
 
 	void add_an_obstacle(vector<float> vertices) {
@@ -393,13 +399,8 @@ public:
 		//cout << "obstacleArea:  " << obstacleArea<<endl;
 		obstacles.push_back(vertices);
 	}
-
-	void update_obj_boundingBox_and_vertices(singleObj& obj, float oldRot) {
-		float s = sin(obj.zrotation - oldRot);
-		float c = cos(obj.zrotation- oldRot);
-		for (int i = 0; i < 4; i++)
-			rot_around_point(obj.translation, obj.vertices[i],s,c);
-		vector<float> xbox = { obj.vertices[0][0], obj.vertices[1][0], obj.vertices[2][0], obj.vertices[3][0]};
+	void update_obj_boundingBox_by_vertices(singleObj& obj) {
+		vector<float> xbox = { obj.vertices[0][0], obj.vertices[1][0], obj.vertices[2][0], obj.vertices[3][0] };
 		vector<float> ybox = { obj.vertices[0][1], obj.vertices[1][1], obj.vertices[2][1], obj.vertices[3][1] };
 
 		vector<float>::iterator it = min_element(xbox.begin(), xbox.end());
@@ -413,8 +414,14 @@ public:
 		float min_y = *min_element(ybox.begin(), ybox.end());
 		float max_x = *max_element(xbox.begin(), xbox.end());
 		float max_y = *max_element(ybox.begin(), ybox.end());
-
 		obj.boundingBox = Rect2f(min_x, max_y, (max_x - min_x), (max_y - min_y));
+	}
+	void update_obj_boundingBox_and_vertices(singleObj& obj, float oldRot) {
+		float s = sin(obj.zrotation - oldRot);
+		float c = cos(obj.zrotation- oldRot);
+		for (int i = 0; i < 4; i++)
+			rot_around_point(obj.translation, obj.vertices[i],s,c);
+		update_obj_boundingBox_by_vertices(obj);
 
 		float offsetx = .0f, offsety = .0f;
 
@@ -438,7 +445,7 @@ public:
 
 	void update_furniture_mask() {
 		furnitureMask = furnitureMask_initial.clone();
-		//float test1 = cv::sum(furnitureMask)[0];
+		float test1 = cv::sum(furnitureMask)[0];
 		vector<vector<Point>> contours;
 		for (int i = 0; i < objctNum; i++) {
 			singleObj * obj = &objects[i];
@@ -449,7 +456,7 @@ public:
 		}
 		//drawContours(furnitureMask, contours, 0, 1, FILLED, 8);
 		drawContours(furnitureMask, contours, -1, 1, FILLED, 8);
-		//float test = cv::sum(furnitureMask)[0];
+		float test = cv::sum(furnitureMask)[0];
 	}
 	void change_obj_freeState(singleObj* obj) {
 		if (obj->isFixed)
